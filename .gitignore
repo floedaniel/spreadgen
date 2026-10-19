@@ -1,6 +1,12 @@
-# Downloaded DANS material: re-create with data-raw/download_original.R
-inst/original/*
+# Original DANS material: the files listed in inst/original/README.md are tracked; further downloads
+# (data-raw/download_original.R all) are ignored
+inst/original/**
+!inst/original/**/
 !inst/original/README.md
+!inst/original/*.pdf
+!inst/original/Code for case studies/1-Diabrotica virgifera virgifera/*
+!inst/original/Spread module code/DD version-world/Prog_SpreadModule_V21world-web.R
+!inst/original/Spread module code/metric version-Europe/Prog_SpreadModule_metric_V08-web.R
 # Re-include small files the repo-level .gitignore excludes
 !data-raw/*.csv
 !tests/testthat/fixtures/*.rds

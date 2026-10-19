@@ -1,0 +1,2 @@
+# keep the original DANS files byte-identical (sizes match data-raw/dans_manifest.csv)
+inst/original/** -text

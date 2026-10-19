@@ -2,3 +2,4 @@
 ^\.gitignore$
 ^inst/original/(?!README\.md$)
 ^LICENSE\.md$
+^\.gitattributes$

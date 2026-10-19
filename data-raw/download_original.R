@@ -1,6 +1,6 @@
 # Download the original Robinet et al. (2012) spread-module code and inputs from DANS (CC0-1.0).
 # doi:10.17026/DANS-2XV-Z3DX. Large files (ESRI grids, R installers, old package zips) are not fetched by default.
-# Files land in inst/original/<directoryLabel>/<filename>; everything except README/LICENSE there is git-ignored.
+# Files land in inst/original/<directoryLabel>/<filename>; the default set is stored in git, further files are ignored.
 #
 # Usage (from the package root): Rscript data-raw/download_original.R [all]
 

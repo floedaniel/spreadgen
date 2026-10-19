@@ -27,7 +27,9 @@ The paper offers a ladder of simple models for the spread question in pest risk 
 pest spread in the area at risk?"), from a non-spatial logistic model to a dispersal-kernel model. The models need
 few parameters, so they can be used for many species with little data. The original R code (version 2.1, `raster`
 and `sp`), the tutorial and the case-study inputs are archived at DANS,
-[doi:10.17026/DANS-2XV-Z3DX](https://doi.org/10.17026/DANS-2XV-Z3DX) (CC0-1.0).
+[doi:10.17026/DANS-2XV-Z3DX](https://doi.org/10.17026/DANS-2XV-Z3DX) (CC0-1.0). The article, the tutorial, the
+original code and the *D. virgifera* inputs are kept in the source repository under `inst/original` (with the DANS
+file ids in its README); they are not part of the installed package.
 
 What `spreadgen` adds:
 

@@ -1,0 +1,19 @@
+"grid_km","params","u","p","lmax","cutoff","cells","fft","R_c_km","kernel_weight_sum","sec_per_draw","sec_per_year","peak_mem_mb","status","abundant_km2_t20","norway_first_reach","norway_reach_10pct"
+20,"dvv_like",80,5,40,"auto",30653,"320x405",5032,1,0.79,0.04,216,"ok",6580852,1,1
+20,"dvv_like",80,5,40,"k",7056,"125x125",800,0.9977,0.28,0.014,211,"ok",2055616,1,1
+20,"local",15,50,5,"auto",30653,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+20,"local",15,50,5,"k",324,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+20,"fat_tail",20,2,10,"auto",30653,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+20,"fat_tail",20,2,10,"k",576,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+10,"dvv_like",80,5,40,"auto",121200,"600x810",5018,1,2.61,0.131,222,"ok",6369540,1,1
+10,"dvv_like",80,5,40,"k",27722,"250x250",800,0.9977,0.32,0.016,205,"ok",1952712,1,1
+10,"local",15,50,5,"auto",121200,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+10,"local",15,50,5,"k",1332,NA,NA,NA,0,0,102,"spread below grid",NA,NA,NA
+10,"fat_tail",20,2,10,"auto",121200,"600x810",5018,0.9925,2.42,0.121,215,"ok",6370940,1,1
+10,"fat_tail",20,2,10,"k",2162,"72x72",200,0.86,0.13,0.007,163,"ok",172901,Inf,Inf
+5,"dvv_like",80,5,40,"auto",482586,"1200x1620",5015,1,11.5,0.575,420,"ok",6245228,1,1
+5,"dvv_like",80,5,40,"k",110889,"500x500",800,0.9977,1.22,0.061,272,"ok",1910284,1,1
+5,"local",15,50,5,"auto",482586,"640x864",155,1,4.64,0.232,245,"ok",285901,Inf,Inf
+5,"local",15,50,5,"k",5329,"108x108",150,1,0.14,0.007,180,"ok",105425,Inf,Inf
+5,"fat_tail",20,2,10,"auto",482586,"1200x1620",5015,0.9925,14.95,0.747,421,"ok",6246103,1,1
+5,"fat_tail",20,2,10,"k",8649,"135x135",200,0.86,0.22,0.011,197,"ok",165276,Inf,Inf

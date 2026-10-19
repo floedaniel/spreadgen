@@ -1,8 +1,10 @@
 ---
-title: "spreadgen: reproducing D. virgifera virgifera"
-output: rmarkdown::html_vignette
+title: "spreadgen: generic pest spread models (Robinet et al. 2012) in R"
+output:
+  rmarkdown::html_vignette:
+    toc: true
 vignette: >
-  %\VignetteIndexEntry{spreadgen: reproducing D. virgifera virgifera}
+  %\VignetteIndexEntry{spreadgen: generic pest spread models (Robinet et al. 2012) in R}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -12,11 +14,132 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height
 library(spreadgen)
 ```
 
-The case study of Robinet et al. (2012, PLoS ONE 7: e43366): western corn rootworm entering at Belgrade in 1992
-(t = 0), evaluated in 2010 (t = 18). Inputs: the CLIMEX table of the original case study, already masked by the
-maize habitat (`inst/extdata`), on the 0.5° lon/lat grid with the original cell areas.
+## 1. Background
 
-**Outputs are scenarios conditional on the assumptions (suitability, parameters, entry), not predictions.**
+`spreadgen` is a port of the generic spread models developed in the EU project PRATIQUE and published by
+
+> Robinet C, Kehlenbeck H, Kriticos DJ, Baker RH, Battisti A, Brunel S, Dupin M, Eyre D, Faccoli M, Ilieva Z,
+> Kenis M, Knight J, Reynaud P, Yart A, van der Werf W (2012). A suite of models to support the quantitative
+> assessment of spread in pest risk analysis. *PLoS ONE* 7(10): e43366.
+> [doi:10.1371/journal.pone.0043366](https://doi.org/10.1371/journal.pone.0043366). PMID: 23056174; PMCID: PMC3467266.
+
+The paper offers a ladder of simple models for the spread question in pest risk analysis ("how fast will the
+pest spread in the area at risk?"), from a non-spatial logistic model to a dispersal-kernel model. The models need
+few parameters, so they can be used for many species with little data. The original R code (version 2.1, `raster`
+and `sp`), the tutorial and the case-study inputs are archived at DANS,
+[doi:10.17026/DANS-2XV-Z3DX](https://doi.org/10.17026/DANS-2XV-Z3DX) (CC0-1.0).
+
+What `spreadgen` adds:
+
+- **Modern spatial stack.** It uses `terra` and runs on any grid, including a projected equal-area grid (e.g. 5 km
+  EPSG:3035), not only 0.5° longitude/latitude.
+- **Suitability input.** Species distribution model (SDM) suitability can be used instead of a CLIMEX growth index.
+- **Faster kernel model.** The kernel model uses an FFT convolution, which makes 5 km Europe feasible.
+- **Uncertainty.** Monte Carlo over PERT-distributed parameters gives time-to-event outputs and per-cell
+  probabilities.
+- **Windows parallel runner.** It runs over many species in parallel on Windows.
+- **Regression tests.** The logistic and radial models reproduce the original exactly on the *D. virgifera* case
+  study (section 4). Every deviation from the original is listed in `inst/NOTES-deviations.md`.
+
+**Outputs are scenarios conditional on the assumptions (suitability, parameters, entry), not predictions.** The
+original authors stress that the models are not validated for prediction.
+
+## 2. The models
+
+All models work on a grid of cells. A cell is suitable when its suitability is at or above a threshold (by default
+0.1). The growth index GI (0-100) is 100 × suitability by default, or the CLIMEX GI. Population density N is
+expressed as a percentage of the carrying capacity K.
+
+| Model | Paper | Idea | Parameters | spreadgen |
+|---|---|---|---|---|
+| SLG, simple logistic growth | C | Each suitable cell grows from N0 without dispersal | λmax, N0 | `spread_slg()` |
+| RR, radial range expansion | B | The invaded area grows as a disc at a constant speed | RR (km/yr) | `spread_radial()` |
+| Rand-RR | A + B | Random suitable cells invaded inside the radial range | RR, n0, r | `spread_radialrand()` |
+| DK, dispersal kernel | D | Yearly dispersal with a 2Dt kernel, then logistic growth | u, p, λmax, initial density | `spread_dispk()` |
+
+LG-Econ (model A with an economic raster) is not implemented.
+
+**SLG.** The local growth rate is r = GI · ln(λmax) / 100. In percent of K:
+
+$$N(t) = \frac{N_0}{N_0/100 + (1 - N_0/100)\,e^{-r t}}$$
+
+`spreadgen` reports, for each cell, the first year in which N passes each density level (default 0.1, 1 and 10 %
+of K; the headline level is 1 %).
+
+**RR.** A suitable cell at distance d (km) from the nearest entry cell is invaded in year ⌈d / RR⌉. Distances can be
+great-circle (`"sphere"`), the original formula (`"v21"`) or grid distances (`"grid"`). With `reach = "land"`,
+distances are measured over land, so the front cannot cross the sea. This option is not in the original.
+
+**DK.** Each year:
+
+1. **Dispersal.** The density in every cell is spread with the 2Dt kernel of Clark et al. (1999):
+   $$f(r) = \frac{\Gamma\!\left(\frac{p+1}{2}\right)}{\Gamma\!\left(\frac{p-1}{2}\right)\, \pi\, p\, u^2}
+   \left(1 + \frac{r^2}{p\,u^2}\right)^{-\frac{p+1}{2}}$$
+   The scale u (km) sets the distance; the shape p (the paper's ν) sets the tail (small p = fat tail). The landing
+   density is the kernel times the area of the landing cell, as in the original. Following the paper, u is set equal
+   to the radial rate RR unless a separate prior is given.
+2. **Death in unsuitable cells.**
+3. **One year of logistic growth** at the cell's rate r.
+
+The kernel needs u larger than the grid resolution. `spreadgen` skips the model (status `"spread below grid"`)
+when u is below 2 cells.
+
+## 3. Main functions
+
+### Preparing the inputs
+
+| Function | Purpose |
+|---|---|
+| `prep_suitability()` | SDM suitability raster → potential range of establishment (PRA): suitable mask at `threshold`, GI, cell areas; optional habitat and elevation masks |
+| `prep_climex()` | The same from a CLIMEX table (EI, GI) on a lon/lat grid, as in the original case studies |
+| `snap_entry()` | Snap entry coordinates to the nearest (suitable) cell, using true distances |
+| `init_density()` | Initial density raster for the kernel model (entry cells at a given % of K) |
+| `k_carrying()`, `n0_from()`, `cell_area()` | Carrying capacity per cell, initial density from a number of founders, cell areas |
+| `as_grid()` | PRA → plain-data grid (vectors only) with a `target` mask: the reporting area (e.g. one country) |
+
+### Running one model
+
+| Function | Purpose |
+|---|---|
+| `spread_slg()`, `slg_time_to()` | Logistic growth: density per cell at the years `t`; years to reach a density level |
+| `spread_radial()` | Radial expansion: invaded cells, year of arrival per cell, area summaries |
+| `spread_radialrand()` | Random invaded cells inside the radial range |
+| `spread_dispk()` | Kernel model (FFT, projected equal-area grid): density per cell, years to each level, mass diagnostics |
+| `spread_dispk_reference()` | Literal port of the original kernel model (slow; used as a regression reference) |
+| `time_to_event()` | First year a region gets its first cell, or x % of its suitable area, above a level |
+| `kernel_2dt()`, `kernel_tail_2dt()` | The 2Dt kernel density and the share of its mass beyond a distance |
+
+The `core_*()` functions (`core_slg()`, `core_radial_years()`, `core_dispk()`) are the same models on a plain grid
+from `as_grid()`. They are used inside the Monte Carlo loop and in parallel workers, where `terra` objects cannot be
+passed between processes.
+
+### Parameters and uncertainty
+
+| Function | Purpose |
+|---|---|
+| `prior_pert()` | A PERT prior (min, mode, max), optionally on the log scale (recommended for rates) |
+| `prior_from_value()`, `prior_from_range()` | A prior from a single value (± 25 % by default) or from a range |
+| `robinet_table1()`, `taxon_group()`, `taxon_priors()` | Parameter values of the paper's Table 1 and default priors per taxon group (insect, nematode, plant, pathogen); low confidence |
+| `read_empirical_priors()`, `rr_floor()` | Radial-rate priors from an observed front-speed table; a lower bound ≤ 0 is floored |
+| `mc_spread()` | Monte Carlo run of one model: Latin hypercube draws, per-draw metrics and time-to-event, per-cell probability. Entry can be fixed or sampled per draw (introduction scenarios) |
+| `summarise_spread()`, `fmt_interval()` | Quantiles (5, 25, 50, 75, 95 %) and mean over draws; "median (2.5-97.5 %)" text with "never within horizon" |
+
+### Plots and parallel runs
+
+| Function | Purpose |
+|---|---|
+| `plot_probability()` | Map of the per-cell probability (viridis); `region = "target"` crops the map to the target |
+| `plot_events()` | Share of draws in which an event has happened, by year |
+| `plot_metric()` | A metric over time: median line with 25-75 % and 5-95 % bands |
+| `sg_workers()` | Number of workers: physical cores − 2, capped by memory |
+| `run_batches()` | Species-level parallel runs on Windows (PSOCK workers via `future`), with failed rows and one sequential retry per crashed batch |
+
+## 4. Worked example: *Diabrotica virgifera virgifera*
+
+The case study of the paper: western corn rootworm entering at Belgrade in 1992 (t = 0), evaluated in 2010
+(t = 18). The inputs are the CLIMEX table of the original case study, already masked by the maize habitat
+(`inst/extdata`), on the 0.5° lon/lat grid with the original cell areas. `v21` holds the areas computed by the
+original code (version 2.1).
 
 ```{r pra}
 tab <- read.csv(system.file("extdata", "dvv_climex_habitat.csv", package = "spreadgen"))
@@ -25,9 +148,9 @@ pra
 v21 <- read.csv(system.file("extdata", "dvv_v21_baseline_areas.csv", package = "spreadgen"))
 ```
 
-## Model C: simple logistic growth
+### Simple logistic growth
 
-K = 1579 km² x 0.2 x 200e6 beetles km⁻² ≈ 6.3e10 per cell; 100 founders give N0 = 1.6e-7 % of K.
+K = 1579 km² × 0.2 × 200e6 beetles km⁻² ≈ 6.3e10 per cell; 100 founders give N0 = 1.6e-7 % of K.
 
 ```{r slg}
 n0 <- n0_from(100, k_carrying(1579, 0.2, 200e6))
@@ -36,10 +159,10 @@ s <- slg$summary[slg$summary$level == 1, ]
 data.frame(t = s$t, spreadgen_km2 = round(s$area_km2), V21_km2 = v21$slg_abundant_km2[s$t])
 ```
 
-At t = 8 both give 59,790 km² above 1 % of K (paper, Fig. 6); the case study used the same N0
+At t = 8 both give 59,790 km² above 1 % of K (paper, Fig. 6). The case study used the same N0
 (100 × 100 / 6.3e10 = 1.587e-7 %), so the areas agree at every t.
 
-## Model B: radial range expansion
+### Radial range expansion
 
 ```{r radial}
 rad <- spread_radial(pra, cbind(20.30, 44.82), RR = 80, t = c(8, 18), distance = "v21")
@@ -47,13 +170,13 @@ data.frame(t = rad$summary$t, spreadgen_km2 = round(rad$summary$area_invaded_km2
            V21_km2 = v21$radial_invaded_km2[rad$summary$t], pct_suitable_cells = round(rad$summary$pniche, 1))
 ```
 
-"More than half of the area of potential establishment invaded within 18 years."
+As in the paper, more than half of the area of potential establishment is invaded within 18 years.
 
-## Model D: dispersal kernel
+### Dispersal kernel
 
-The literal port (`spread_dispk_reference()`) reproduces V21 to 1e-14 on this grid but takes about 3 minutes for
-18 years; the production version (`spread_dispk()`) is an FFT convolution and needs an equal-area grid. Here the
-inputs are resampled to 25 km LAEA (EPSG:3035).
+The literal port (`spread_dispk_reference()`) reproduces the original to 1e-14 on this grid but takes about 3
+minutes for 18 years. The production version (`spread_dispk()`) is an FFT convolution and needs an equal-area
+grid, so here the inputs are resampled to 25 km LAEA (EPSG:3035).
 
 ```{r dispk}
 ei <- terra::project(pra$rast[["ei"]], "EPSG:3035", res = 25000, method = "near")
@@ -68,12 +191,12 @@ s <- dk$summary[dk$summary$level == 1, ]
 data.frame(t = s$t, spreadgen_25km_km2 = round(s$area_km2), V21_km2 = round(v21$dispk_abundant_km2[s$t]))
 ```
 
-The kernel model is in its exponential phase at t = 16-18, so grid and founder assumptions shift the invaded area
+At t = 16-18 the kernel model is in its exponential phase, so grid and founder assumptions shift the invaded area
 strongly (see `inst/benchmarks-dispk.md`).
 
-## Monte Carlo
+### Monte Carlo
 
-Parameter uncertainty as PERT priors; the radial rate on the log scale.
+Parameter uncertainty is expressed as PERT priors, with the radial rate on the log scale.
 
 ```{r mc}
 g <- as_grid(pra)
@@ -85,9 +208,57 @@ s[s$metric == "pct_suitable", c("t", "q05", "q50", "q95")]
 plot_metric(mc$metrics, "pct_suitable", ylab = "% of suitable area invaded")
 ```
 
-## Caveats
+## 5. Typical workflow with an SDM
 
-- Scenarios, not predictions; no predictive validation exists (Robinet et al. 2012).
-- The kernel shape (p, the paper's nu) and lmax are weakly identifiable.
-- GI from SDM suitability is an assumption (CLIMEX GI is a population growth index).
-- Empirical front speeds include human-assisted spread; they are not natural dispersal rates.
+A sketch of a screening run for one species: simulate on a European grid and report on a target country. Not run,
+because it needs an SDM raster and a target mask.
+
+```{r workflow, eval = FALSE}
+suit <- terra::rast("sdm_suitability.tif")            # 0-1, on a projected equal-area grid (e.g. 5 km EPSG:3035)
+target <- terra::rast("norway_mask.tif")              # 1 = reporting area, NA elsewhere (same grid)
+pra <- prep_suitability(suit, threshold = 0.1)        # GI = 100 x suitability
+g <- as_grid(pra, target = target)
+
+entry_cells <- snap_entry(pra, cbind(10.0, 53.5), crs = "EPSG:4326")$cell   # established population(s)
+taxon <- taxon_priors("insect")                      # lmax, p (and RR) defaults, low confidence
+rr <- prior_pert(2, 7.5, 26, log = TRUE)              # natural spread rate, km/yr
+
+# radial model: years until the target is reached, % of the target's suitable area invaded
+m_rr <- mc_spread(g, "RR", list(RR = rr), n_draws = 1000, t = c(5, 10, 20, 50),
+                  entry = list(cells = entry_cells), seed = 1, key = "SPECIES")
+# kernel model (u = RR), initial density 1-10-50 % of K in the entry cells
+m_dk <- mc_spread(g, "DK", list(RR = rr, p = taxon$p, lmax = taxon$lmax, init = prior_pert(1, 10, 50, log = TRUE)),
+                  n_draws = 100, t = c(5, 10, 20), entry = list(cells = entry_cells), seed = 1, key = "SPECIES",
+                  time_limit = 30 * 60)
+
+summarise_spread(list(m_rr, m_dk))$events            # time to first target cell and to x % of the target
+plot_probability(g, m_dk$prob[, 3], "Kernel model, t = 20 yr", region = "target")
+```
+
+For a species that is not yet established, pass `entry_sampler = list(weights = w, n = 1)` instead of `entry`: an
+entry cell is then drawn per draw, e.g. weighted by human population inside the target. The results are then
+conditional on introduction.
+
+## 6. Caveats
+
+- **Scenarios, not predictions.** Robinet et al. (2012) state that there is no predictive validation.
+- **Weak identifiability.** The kernel shape p (the paper's ν) and λmax are hard to pin down; the defaults from
+  Table 1 are taxon-level guesses.
+- **SDM suitability as GI is an assumption.** The CLIMEX GI is a population growth index; an SDM score is not.
+- **Empirical front speeds** include human-assisted spread. They are total spread rates, not natural dispersal.
+- **Long tails in the kernel model.** The kernel model is deterministic and has no Allee effect, so very small
+  densities carried by the kernel tail can grow to the reporting levels far from the source, even across the sea.
+  Report density levels (1 % of K), not mere presence.
+- **Grid limit.** The kernel model is skipped when u is below 2 grid cells.
+
+All deviations from the original code are listed with reasons in `inst/NOTES-deviations.md`.
+
+## References
+
+- Robinet C, Kehlenbeck H, Kriticos DJ, Baker RH, Battisti A, Brunel S, Dupin M, Eyre D, Faccoli M, Ilieva Z,
+  Kenis M, Knight J, Reynaud P, Yart A, van der Werf W (2012). A suite of models to support the quantitative
+  assessment of spread in pest risk analysis. *PLoS ONE* 7(10): e43366. doi:10.1371/journal.pone.0043366.
+  PMID: 23056174; PMCID: PMC3467266.
+- Original code, tutorial and case-study data (version 2.1): DANS, doi:10.17026/DANS-2XV-Z3DX (CC0-1.0).
+- Clark JS, Silman M, Kern R, Macklin E, HilleRisLambers J (1999). Seed dispersal near and far: patterns across
+  temperate and tropical forests. *Ecology* 80: 1475-1494.

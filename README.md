@@ -1,7 +1,12 @@
 # spreadgen
 
-Generic pest spread models of Robinet et al. (2012, *PLoS ONE* 7: e43366) for pest risk screening, ported to
-modern R (`terra`) and run as Monte Carlo over PERT-distributed parameters:
+Generic pest spread models of Robinet et al. (2012) for pest risk screening, ported to modern R (`terra`) and run
+as Monte Carlo over PERT-distributed parameters. Introduction, models, main functions and a worked example:
+`vignette("spreadgen")`.
+
+> Robinet C, Kehlenbeck H, Kriticos DJ, Baker RH, Battisti A, Brunel S, Dupin M, Eyre D, Faccoli M, Ilieva Z,
+> Kenis M, Knight J, Reynaud P, Yart A, van der Werf W (2012). A suite of models to support the quantitative
+> assessment of spread in pest risk analysis. *PLoS ONE* 7(10): e43366. doi:10.1371/journal.pone.0043366
 
 | Model | Function | Parameters |
 |---|---|---|
@@ -33,24 +38,30 @@ a population growth index); empirical front speeds include human-assisted spread
 
 ## Install
 
-From the folder that contains `spreadgen/`:
+From this repository (e.g. `C:/Dev/spreadgen`):
 
-    R CMD INSTALL spreadgen
+    R CMD INSTALL .
+
+or from GitHub: `remotes::install_github("floedaniel/spreadgen")`.
 
 Parallel workers load the installed package, so reinstall after every change (the batch driver checks that the
 installed version matches and can reinstall itself).
 
 ## Tests
 
-    Rscript -e "devtools::test('spreadgen')"
-    set SPREADGEN_SLOW_TESTS=true && Rscript -e "devtools::test('spreadgen', filter = 'dispk')"   :: full 18-year V21 regression (~3 min)
+    Rscript -e "devtools::test()"
+    set SPREADGEN_SLOW_TESTS=true && Rscript -e "devtools::test(filter = 'dispk')"   :: full 18-year V21 regression (~3 min)
 
-## Long runs (the batch driver `4_scripts/spread_robinet.R`)
+## Long runs (a batch driver, e.g. `spread_robinet.R` in the VKM plant health data project)
 
-- Run with `Rscript` (or `4_scripts/run_spread_robinet.bat`), not inside the RStudio session: a long session can
+The package has no project paths. A driver script keeps the inputs and settings and points to this repository as
+the package source. Notes for long runs on Windows:
+
+- Run with `Rscript` (or a `.bat` file), not inside the RStudio session: a long session can
   be interrupted by the IDE, and PSOCK workers are separate R processes anyway.
 - Disable sleep / hibernate for the duration (Windows: Settings > System > Power), or run
   `powercfg /change standby-timeout-ac 0` before and restore afterwards.
 - Optionally pause OneDrive sync during the run: per-species outputs are written to a local folder
   (`LOCAL_DIR`, default `C:/tmp/spreadgen`) and copied into the species folders once per batch.
-- Every setting is in chapter 0 of `spread_robinet.R`; the log goes to `4_scripts/logs/`.
+- In `spread_robinet.R` every setting is in chapter 0 (`SPREADGEN_SRC` = this repository); the log goes to
+  `4_scripts/logs/`.

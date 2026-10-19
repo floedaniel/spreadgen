@@ -42,5 +42,12 @@ measured effect on the D. virgifera regression (fixture `tests/testthat/fixtures
 | D7 | Logistic evaluated as `N0 / (N0/100 + (1 - N0/100) e^(-rt))` | Same value; no overflow (NaN) for large `r t` | Identical to 1e-12 |
 | D8 | Population totals not reported | User decision 2026-10-19 (O9); host-weighted K remains possible via `k_carrying(area, host_raster, density)` | n/a |
 | D9 | Original SLG class counts (`sum0..sum100`, with the original's overlapping boundary at 25) only in `slg_classes_v21()` | Regression; the summary uses the two thresholds | Identical counts t = 1..18 |
+| D10 | RR distance modes: `"sphere"` (default; the original great circle, radius 20000/π km, cosine clamped to [-1, 1], no rounding), `"v21"` (cosine rounded to 7 digits before `acos`, inclusive `R <= RR*t`), `"grid"` (`terra::distance`: WGS84 geodesic / Euclidean on projected grids, fastest with many entry cells) | The 7-digit rounding shifts short distances by up to ~2 km (1° → −1.8 km); `"v21"` kept for exact regression | Jaccard vs V21, t = 1..18: `v21` 1, `sphere` 1, `grid` ≥ 0.986 (≤ 6 cells) |
+| D11 | `reach = "land"`: distance as the shortest path through cells with data (`terra::gridDist`), sea / no-data cells are barriers. **Not in Robinet et al. (2012)**, which uses straight-line discs (`reach = "disc"`, default) | Comparability with the route-over-land screen of the sibling scripts | n/a (option; not used in the regression) |
+| D12 | RR also returns `years_to_reach = ceil(d / RR)` (d = distance to the nearest entry cell; entry cells 0) | Time-to-event outputs (user decision 2026-10-19); equals the first integer `t` with `d <= RR*t` | Consistent with the invaded stacks (tested) |
+| D13 | Rand-RR draws one random order of cells per run, so the invaded set is nested in time; it uses the caller's RNG stream (no seed argument; `mc_spread()` seeds) | Original drew independently per call without seed control (issue 11) | Counts follow the original formula (tested); cell sets are random |
+
+The disc is the union of discs around the entry cells only (as V21: newly invaded cells do not start discs).
+Entry snapping ties (V21: first cell by squared degree distance) are not tested.
 
 (Extended as milestones add code.)

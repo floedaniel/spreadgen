@@ -17,5 +17,6 @@ logistic_pct(n0, r, t)
 Density at \code{t}, percent of K.
 }
 \description{
-\verb{N_t = 100 * N0 * exp(r t) / (100 + N0 * (exp(r t) - 1))}, the logistic used by all Robinet et al. (2012) models.
+\verb{N_t = 100 * N0 * exp(r t) / (100 + N0 * (exp(r t) - 1))}, the logistic used by all Robinet et al. (2012) models,
+evaluated as \verb{N0 / (N0 / 100 + (1 - N0 / 100) * exp(-r t))} (same value, no overflow for large \verb{r t}).
 }

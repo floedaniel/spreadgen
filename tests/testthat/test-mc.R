@@ -49,13 +49,24 @@ test_that("Table 1 taxon priors: low confidence, bounds from the published value
                c("insect", "nematode", "plant", "pathogen"))
 })
 
-test_that("read_empirical_priors: usable rows, reasons, rr_source", {
-  x <- data.frame(eppo = c("A", "B", "C", "D"), front_km_yr = c(10, NA, 5, 8), front_lo = c(6, NA, 2, 0),
-                  front_hi = c(15, NA, 9, 12), flags = c("", "", "short window (6 yr)", NA))
+test_that("read_empirical_priors: usable rows, floor flag, reasons, rr_source", {
+  x <- data.frame(eppo = c("A", "B", "C", "D", "E", "F"), front_km_yr = c(10, NA, 5, 8, 8, -1),
+                  front_lo = c(6, NA, 2, 0, -3, -5), front_hi = c(15, NA, 9, 12, 12, 4),
+                  flags = c("", "", "short window (6 yr)", NA, "", ""))
   e <- read_empirical_priors(x)
-  expect_equal(e$usable, c(TRUE, FALSE, FALSE, FALSE))
+  expect_equal(e$usable, c(TRUE, FALSE, FALSE, TRUE, TRUE, FALSE))
+  expect_equal(e$floor_needed, c(FALSE, FALSE, FALSE, TRUE, TRUE, FALSE))
   expect_match(e$reason[3], "short window")
   expect_equal(unique(e$rr_source), "empirical front speed")
+  u <- read_empirical_priors(x, nonpositive_lo = "unusable")
+  expect_equal(u$usable, c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE))
+})
+
+test_that("rr_floor: trait-table lower bound, else 0.1 x median; positive bounds kept", {
+  f <- rr_floor(c(-3, 0, 2, -1), c(8, 8, 5, 10), c(1.5, NA, 1, 20))
+  expect_equal(f$rr_min, c(1.5, 0.8, 2, 1))
+  expect_equal(f$floor_applied, c(TRUE, TRUE, FALSE, TRUE))
+  expect_equal(f$floor_source, c("trait table", "0.1 x median", NA, "0.1 x median"))
 })
 
 # ---- mc_spread ----
@@ -148,4 +159,16 @@ test_that("sg_workers respects caps", {
   expect_equal(sg_workers(max_workers = 3, avail_gb = 100), min(3L, max(1L, parallel::detectCores(logical = FALSE) - 2L)))
   expect_equal(sg_workers(avail_gb = 1, mem_per_worker_gb = 0.5), min(2L, max(1L, parallel::detectCores(logical = FALSE) - 2L)))
   expect_equal(sg_workers(avail_gb = 0.1), 1L)
+})
+
+test_that("mc_spread time_limit stops between draws and flags the run", {
+  g <- mc_grid()
+  pr <- list(RR = prior_pert(1, 2, 4, log = TRUE))
+  a <- mc_spread(g, "RR", pr, 6, t = c(2, 5), entry = list(cells = 35L), seed = 1, key = "X", time_limit = -1)
+  expect_true(a$settings$timed_out)
+  expect_equal(a$n_ok, 0)
+  expect_true(all(a$draws$status == "timeout"))
+  b <- mc_spread(g, "RR", pr, 6, t = c(2, 5), entry = list(cells = 35L), seed = 1, key = "X")
+  expect_false(b$settings$timed_out)
+  expect_equal(b$n_ok, 6)
 })

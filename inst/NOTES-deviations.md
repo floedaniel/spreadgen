@@ -55,6 +55,8 @@ measured effect on the D. virgifera regression (fixture `tests/testthat/fixtures
 | D19 | DK skipped (`status = "spread below grid"`) when `u < min_u_cells` (default 2) cells; warning when kernel weights sum to > 1.05 | Robinet: `u` must exceed the grid resolution; point discretisation over-counts mass for `u` near the cell size | n/a |
 | D20 | Optional `kernel = "cell"`: kernel averaged over `cell_sub`² points per landing cell (not in the original) | Better mass balance when `u` is near the cell size | Off by default |
 | D21 | Every DK cell gets `years_to_reach` / `years_to_abundant` (first year above each threshold; `Inf` = not within the horizon) and `time_to_event()` summarises a region (first cell, x % of the region's suitable area) | Time-to-event outputs (user decision 2026-10-19) | n/a |
+| D22 | Empirical front speeds with a lower bound <= 0 stay usable: the lower bound is replaced with the natural (trait-table) lower bound, or 0.1 x median when there is none or it is not below the median (`rr_floor()`; flagged in the outputs) | A 95 % interval reaching zero or below is common for short or noisy fronts; dropping those species left 3 usable rows (user decision 2026-10-19) | `read_empirical_priors(nonpositive_lo = "unusable")` |
+| D23 | `mc_spread(time_limit = )`: elapsed-time cap per run, checked between draws; remaining draws get status `"timeout"` | Long kernel runs must not block a batch | `Inf` |
 
 The disc is the union of discs around the entry cells only (as V21: newly invaded cells do not start discs).
 Entry snapping ties (V21: first cell by squared degree distance) are not tested.

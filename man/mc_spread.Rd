@@ -19,7 +19,8 @@ mc_spread(
   key = NULL,
   pct = c(10, 50),
   dk_args = list(),
-  id = list()
+  id = list(),
+  time_limit = Inf
 )
 }
 \arguments{
@@ -52,11 +53,14 @@ to the nearest entry cell, e.g. computed at the I/O edge; computed with \code{\l
 \item{dk_args}{Further arguments for \code{\link[=core_dispk]{core_dispk()}} (e.g. \code{cutoff}, \code{min_u_cells}).}
 
 \item{id}{Named list of identifiers copied into every output row (e.g. \code{list(species = "DIABVI", scenario = "natural")}).}
+
+\item{time_limit}{Elapsed-time cap in seconds for the whole run (default \code{Inf}). Checked before every draw, so a
+run can exceed it by one draw; draws not started get status \code{"timeout"} and \code{settings$timed_out} is \code{TRUE}.}
 }
 \value{
 An object of class \code{sg_mc}: \code{draws} (parameters and \code{status} per draw), \code{metrics} (draw x t x level),
 \code{events} (draw x level), \code{prob} (matrix cells x t: share of successful draws at or above the headline level, or
-invaded for RR), \code{n_ok}, \code{settings}.
+invaded for RR), \code{n_ok}, \code{settings} (including \code{timed_out}, \code{elapsed_s}).
 }
 \description{
 Draws parameters from PERT priors (Latin hypercube by default) and, for introduction scenarios, entry cells; runs

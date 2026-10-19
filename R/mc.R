@@ -133,13 +133,15 @@ seed_from_key <- function(seed, key = NULL) {
 #' @param pct Shares of the target's suitable area for time-to-event.
 #' @param dk_args Further arguments for [core_dispk()] (e.g. `cutoff`, `min_u_cells`).
 #' @param id Named list of identifiers copied into every output row (e.g. `list(species = "DIABVI", scenario = "natural")`).
+#' @param time_limit Elapsed-time cap in seconds for the whole run (default `Inf`). Checked before every draw, so a
+#'   run can exceed it by one draw; draws not started get status `"timeout"` and `settings$timed_out` is `TRUE`.
 #' @return An object of class `sg_mc`: `draws` (parameters and `status` per draw), `metrics` (draw x t x level),
 #'   `events` (draw x level), `prob` (matrix cells x t: share of successful draws at or above the headline level, or
-#'   invaded for RR), `n_ok`, `settings`.
+#'   invaded for RR), `n_ok`, `settings` (including `timed_out`, `elapsed_s`).
 #' @export
 mc_spread <- function(g, model = c("SLG", "RR", "DK"), priors, n_draws, t = c(5, 10, 20, 50), levels = c(0.1, 1, 10),
                       headline = 1, entry = NULL, entry_sampler = NULL, method = c("lhs", "random"), seed = 1, key = NULL,
-                      pct = c(10, 50), dk_args = list(), id = list()) {
+                      pct = c(10, 50), dk_args = list(), id = list(), time_limit = Inf) {
   model <- match.arg(model)
   method <- match.arg(method)
   stopifnot(inherits(g, "sg_grid"), n_draws >= 1, headline %in% levels)
@@ -172,7 +174,14 @@ mc_spread <- function(g, model = c("SLG", "RR", "DK"), priors, n_draws, t = c(5,
   prob <- matrix(0, length(g$ei), length(t))
   status <- character(n_draws)
   metrics <- events <- vector("list", n_draws)
+  t_start <- proc.time()[["elapsed"]]
+  timed_out <- FALSE
   for (i in seq_len(n_draws)) {
+    if (proc.time()[["elapsed"]] - t_start > time_limit) {
+      timed_out <- TRUE
+      status[i:n_draws] <- "timeout"
+      break
+    }
     pr <- draws[i, , drop = FALSE]
     cells_i <- if (model == "SLG") integer(0) else if (!is.null(entry)) entry$cells else rnd$entries[[i]]
     d_i <- if (model == "SLG") NULL else if (!is.null(fixed_d)) fixed_d else grid_dist_km(g, cells_i)
@@ -233,7 +242,8 @@ mc_spread <- function(g, model = c("SLG", "RR", "DK"), priors, n_draws, t = c(5,
                  prob = if (n_ok) prob / n_ok else prob, n_ok = n_ok,
                  settings = list(model = model, t = t, levels = lv, headline = if (model == "RR") NA else headline,
                                  n_draws = n_draws, method = method, seed = seed, key = key, seed_used = s, pct = pct,
-                                 priors = priors, id = id, horizon = horizon)),
+                                 priors = priors, id = id, horizon = horizon, timed_out = timed_out,
+                                 elapsed_s = proc.time()[["elapsed"]] - t_start)),
             class = "sg_mc")
 }
 

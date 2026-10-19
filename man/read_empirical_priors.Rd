@@ -4,21 +4,28 @@
 \alias{read_empirical_priors}
 \title{Radial-rate (RR) priors from an empirical front-speed table}
 \usage{
-read_empirical_priors(x, unreliable = "short window")
+read_empirical_priors(
+  x,
+  unreliable = "short window",
+  nonpositive_lo = c("floor", "unusable")
+)
 }
 \arguments{
 \item{x}{Path to an .xlsx file (first sheet) or a data frame.}
 
 \item{unreliable}{Regular expression for flags that make a row unusable (default: short window).}
+
+\item{nonpositive_lo}{\code{"floor"} or \code{"unusable"} (see Details).}
 }
 \value{
-Data frame: \code{eppo}, \code{rr_min}, \code{rr_mode}, \code{rr_max}, \code{usable}, \code{reason}, \code{basis}, \code{flags},
-\code{rr_source = "empirical front speed"}.
+Data frame: \code{eppo}, \code{rr_min} (raw lower bound), \code{rr_mode}, \code{rr_max}, \code{usable}, \code{floor_needed}, \code{reason},
+\code{basis}, \code{flags}, \code{rr_source = "empirical front speed"}.
 }
 \description{
 Reads a table with one row per species and the columns \code{eppo}, \code{front_km_yr}, \code{front_lo}, \code{front_hi} (km/yr;
 median and 95 \% interval) and optionally \code{flags}, \code{basis}, \code{result} (e.g. \code{spread_towards_norway.xlsx} written by
-\code{spread_plot.R}). A row is usable when the three values are finite, \code{front_lo > 0} and no flag matches
-\code{unreliable}. Empirical front speeds include human-assisted spread: they are total spread rates, not natural
-dispersal rates.
+\code{spread_plot.R}). A row is usable when the three values are finite, the median is positive, \verb{front_lo <= median <= front_hi} and no flag matches \code{unreliable}. With \code{nonpositive_lo = "floor"} (default) a lower bound \verb{<= 0} keeps
+the row usable and sets \code{floor_needed = TRUE}: the lower bound is then replaced with \code{\link[=rr_floor]{rr_floor()}}. With
+\code{"unusable"} such rows are unusable. Empirical front speeds include human-assisted spread: they are total spread
+rates, not natural dispersal rates.
 }

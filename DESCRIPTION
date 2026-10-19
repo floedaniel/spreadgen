@@ -15,15 +15,22 @@ Depends: R (>= 4.1)
 Imports:
     terra,
     stats,
-    utils
+    utils,
+    parallel,
+    ggplot2,
+    future,
+    future.apply
 Suggests:
     testthat (>= 3.0.0),
     data.table,
-    raster,
+    ps,
+    readxl,
+    writexl,
     sf,
-    ggplot2,
-    viridis,
-    tidyterra,
-    future.apply
+    raster,
+    rnaturalearth,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0

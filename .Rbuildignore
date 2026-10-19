@@ -1,0 +1,4 @@
+^data-raw$
+^\.gitignore$
+^inst/original/(?!README\.md$)
+^LICENSE\.md$

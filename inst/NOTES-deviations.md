@@ -35,5 +35,12 @@ measured effect on the D. virgifera regression (fixture `tests/testthat/fixtures
 |---|---|---|---|
 | D1 | GI = suitability × 100 without rescaling to the PRA maximum (`gi_rescale = "none"`, default); `"domain"` reproduces the original rescaling | User decision 2026-10-19: suitability is a probability, rescaling to the domain maximum would change the growth rate with the extent | n/a (regression uses CLIMEX GI, rescaled as the original) |
 | D2 | LG-Econ (model A) not implemented | User decision 2026-10-19: no economic raster | n/a |
+| D3 | GI set to 0 outside suitable cells (original masks GI by host / elevation only) | Clarity; every model zeroes density where EI = 0 before or after growth | None: SLG identical to 1e-12 over t = 1..18 |
+| D4 | Cell area default `terra::cellSize()` (WGS84 ellipsoid, or planar on projected grids); `area_method = "v21"` gives the original sphere approximation (O1) | Exact areas; equal-area grids in production | Ellipsoid vs v21 up to 1.02 % per cell on the 0.5° grid; regression tests use `"v21"` (published SLG area 59,790 km² reproduced) |
+| D5 | Entry snapping by great-circle (lon/lat, WGS84) or Euclidean (projected) distance instead of squared degree differences (O6) | Correct nearest cell at high latitudes | Belgrade snaps to the same cell (20.25 E, 44.75 N) |
+| D6 | Two density thresholds, `reach` (default 1e-6 % of K) and `abundant` (default 1 %, the original's invaded threshold, strict `>`) | User decision 2026-10-19: DK / SLG invaded counts are threshold- and horizon-sensitive (O8) | `abundant` = original `ninv` |
+| D7 | Logistic evaluated as `N0 / (N0/100 + (1 - N0/100) e^(-rt))` | Same value; no overflow (NaN) for large `r t` | Identical to 1e-12 |
+| D8 | Population totals not reported | User decision 2026-10-19 (O9); host-weighted K remains possible via `k_carrying(area, host_raster, density)` | n/a |
+| D9 | Original SLG class counts (`sum0..sum100`, with the original's overlapping boundary at 25) only in `slg_classes_v21()` | Regression; the summary uses the two thresholds | Identical counts t = 1..18 |
 
 (Extended as milestones add code.)

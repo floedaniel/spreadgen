@@ -14,10 +14,11 @@ Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1)
 Imports:
     terra,
-    data.table,
-    stats
+    stats,
+    utils
 Suggests:
     testthat (>= 3.0.0),
+    data.table,
     raster,
     sf,
     ggplot2,
@@ -25,3 +26,4 @@ Suggests:
     tidyterra,
     future.apply
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

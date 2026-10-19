@@ -1,0 +1,6 @@
+# MIT License
+
+Copyright (c) 2026 Daniel Flo
+
+The ported algorithms originate from the PRATIQUE spread module by C. Robinet and W. van der Werf
+(DANS doi:10.17026/DANS-2XV-Z3DX), released under CC0-1.0.

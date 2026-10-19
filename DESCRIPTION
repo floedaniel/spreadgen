@@ -1,0 +1,27 @@
+Package: spreadgen
+Title: Generic Pest Spread Models (Robinet et al. 2012) for Pest Risk Screening
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Daniel", "Flo", email = "daniel.flo@vkm.no", role = c("aut", "cre")))
+Description: A terra-based port of the generic spread module of Robinet et al. (2012, PLoS ONE 7: e43366;
+    doi:10.1371/journal.pone.0043366): simple logistic growth, radial range expansion and a 2Dt dispersal-kernel
+    integrodifference model, run on a suitability raster with Monte Carlo over PERT-distributed parameters.
+    Outputs are scenarios conditional on assumptions, not predictions. The original code is CC0-1.0
+    (DANS doi:10.17026/DANS-2XV-Z3DX).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Depends: R (>= 4.1)
+Imports:
+    terra,
+    data.table,
+    stats
+Suggests:
+    testthat (>= 3.0.0),
+    raster,
+    sf,
+    ggplot2,
+    viridis,
+    tidyterra,
+    future.apply
+Config/testthat/edition: 3

@@ -1,0 +1,8 @@
+# Downloaded DANS material: re-create with data-raw/download_original.R
+inst/original/*
+!inst/original/README.md
+# Re-include small files the repo-level .gitignore excludes
+!data-raw/*.csv
+!tests/testthat/fixtures/*.rds
+!tests/testthat/fixtures/*.csv
+.Rproj.user/

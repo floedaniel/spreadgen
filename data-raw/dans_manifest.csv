@@ -1,0 +1,125 @@
+"dir","name","id","size"
+"","Case studies.pdf",23519,5126456
+"","easy-migration.zip",23454,78781
+"","Tutorial on the generic spread models.pdf",23540,1593472
+"Code for case studies/1-Diabrotica virgifera virgifera","ClimexOutput.txt",23576,132582
+"Code for case studies/1-Diabrotica virgifera virgifera","econ.tif",23562,325214
+"Code for case studies/1-Diabrotica virgifera virgifera","europeL.txt",23538,481998
+"Code for case studies/1-Diabrotica virgifera virgifera","habitat.tif",23513,166478
+"Code for case studies/1-Diabrotica virgifera virgifera","presence.txt",23460,20
+"Code for case studies/1-Diabrotica virgifera virgifera","Prog_SpreadModule_V21-web.R",23542,46048
+"Code for case studies/1-Diabrotica virgifera virgifera","SpreadModule.RData",23453,42
+"Code for case studies/1-Diabrotica virgifera virgifera","useful commands.r",23557,576
+"Code for case studies/2-Anoplophora chinensis","ClimexOutput.txt",23568,130464
+"Code for case studies/2-Anoplophora chinensis","europeL.txt",23543,481998
+"Code for case studies/2-Anoplophora chinensis","presence.txt",23456,19
+"Code for case studies/2-Anoplophora chinensis","Prog_SpreadModule_V21-web.R",23524,46048
+"Code for case studies/2-Anoplophora chinensis","SpreadModule.RData",23511,42
+"Code for case studies/2-Anoplophora chinensis","useful commands.r",23455,385
+"Code for case studies/2-Anoplophora chinensis/habitat","dblbnd.adf",23459,32
+"Code for case studies/2-Anoplophora chinensis/habitat","hdr.adf",23563,308
+"Code for case studies/2-Anoplophora chinensis/habitat","prj.adf",23466,120
+"Code for case studies/2-Anoplophora chinensis/habitat","sta.adf",23483,32
+"Code for case studies/2-Anoplophora chinensis/habitat","vat.adf",23477,760
+"Code for case studies/2-Anoplophora chinensis/habitat","w001001.adf",23533,167582
+"Code for case studies/2-Anoplophora chinensis/habitat","w001001x.adf",23534,9692
+"Code for case studies/3-Anoplophora glabripennis","ClimexOutput.txt",23554,104952
+"Code for case studies/3-Anoplophora glabripennis","europeL.txt",23517,481998
+"Code for case studies/3-Anoplophora glabripennis","presence.txt",23545,27
+"Code for case studies/3-Anoplophora glabripennis","Prog_SpreadModule_V21-web.R",23555,46048
+"Code for case studies/3-Anoplophora glabripennis","SpreadModule.RData",23553,42
+"Code for case studies/3-Anoplophora glabripennis","useful commands.r",23473,389
+"Code for case studies/3-Anoplophora glabripennis/habitat","dblbnd.adf",23499,32
+"Code for case studies/3-Anoplophora glabripennis/habitat","hdr.adf",23565,308
+"Code for case studies/3-Anoplophora glabripennis/habitat","prj.adf",23539,120
+"Code for case studies/3-Anoplophora glabripennis/habitat","sta.adf",23514,32
+"Code for case studies/3-Anoplophora glabripennis/habitat","vat.adf",23551,760
+"Code for case studies/3-Anoplophora glabripennis/habitat","w001001.adf",23558,167582
+"Code for case studies/3-Anoplophora glabripennis/habitat","w001001x.adf",23492,9692
+"Code for case studies/4-Meloidogyne enterolobii","ClimexOutput.txt",23574,128110
+"Code for case studies/4-Meloidogyne enterolobii","ClimexOutput_Meloidogyne_incognita.txt",23488,128110
+"Code for case studies/4-Meloidogyne enterolobii","ClimexOutput_Meloidogyne_javanica.txt",23556,127974
+"Code for case studies/4-Meloidogyne enterolobii","europeL.txt",23561,481998
+"Code for case studies/4-Meloidogyne enterolobii","habitat.tif",23465,906471
+"Code for case studies/4-Meloidogyne enterolobii","presence.txt",23461,26
+"Code for case studies/4-Meloidogyne enterolobii","Prog_SpreadModule_V21-web.R",23479,46048
+"Code for case studies/4-Meloidogyne enterolobii","SpreadModule.RData",23462,42
+"Code for case studies/4-Meloidogyne enterolobii","useful commands.r",23544,352
+"Code for case studies/5-Bursaphelenchus xylophilus","ClimexOutput.txt",23464,127700
+"Code for case studies/5-Bursaphelenchus xylophilus","europeL.txt",23491,481998
+"Code for case studies/5-Bursaphelenchus xylophilus","presence.txt",23490,50
+"Code for case studies/5-Bursaphelenchus xylophilus","Prog_SpreadModule_V21-web.R",23569,46048
+"Code for case studies/5-Bursaphelenchus xylophilus","SpreadModule.RData",23560,42
+"Code for case studies/5-Bursaphelenchus xylophilus","useful commands.r",23523,509
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","dblbnd.adf",23495,32
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","hdr.adf",23575,308
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","prj.adf",23493,120
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","sta.adf",23498,32
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","w001001.adf",23485,98790
+"Code for case studies/5-Bursaphelenchus xylophilus/habitat","w001001x.adf",23567,1580
+"Code for case studies/6-Eichhornia crassipes","ClimexOutput.txt",23482,125096
+"Code for case studies/6-Eichhornia crassipes","europeL.txt",23496,481998
+"Code for case studies/6-Eichhornia crassipes","presence.txt",23571,43
+"Code for case studies/6-Eichhornia crassipes","Prog_SpreadModule_V21-web.R",23537,46048
+"Code for case studies/6-Eichhornia crassipes","SpreadModule.RData",23509,42
+"Code for case studies/6-Eichhornia crassipes","useful commands.r",23502,355
+"Code for case studies/7-Gibberella circinata","ClimexOutput.txt",23467,123044
+"Code for case studies/7-Gibberella circinata","europeL.txt",23573,481998
+"Code for case studies/7-Gibberella circinata","Prog_SpreadModule_V21-web.R",23515,46048
+"Code for case studies/7-Gibberella circinata","SpreadModule.RData",23463,42
+"Code for case studies/7-Gibberella circinata","useful commands.r",23505,350
+"Code for case studies/7-Gibberella circinata/habitat","dblbnd.adf",23525,32
+"Code for case studies/7-Gibberella circinata/habitat","hdr.adf",23549,308
+"Code for case studies/7-Gibberella circinata/habitat","prj.adf",23507,120
+"Code for case studies/7-Gibberella circinata/habitat","sta.adf",23500,32
+"Code for case studies/7-Gibberella circinata/habitat","w001001.adf",23532,188922312
+"Code for case studies/7-Gibberella circinata/habitat","w001001x.adf",23475,184548
+"R installer","R-2.11.1-win32.exe",23494,33658264
+"R installer","R-2.11.1-win64.exe",23506,34556926
+"Spread module code/DD version-Europe","August13.r",23547,592
+"Spread module code/DD version-Europe","ClimexOutput.txt",23564,127601
+"Spread module code/DD version-Europe","econ.tif",23541,325214
+"Spread module code/DD version-Europe","elev.asc",23469,2722317
+"Spread module code/DD version-Europe","europeL.txt",23548,481998
+"Spread module code/DD version-Europe","GPSpoints.txt",23503,56
+"Spread module code/DD version-Europe","habitat.tif",23480,166478
+"Spread module code/DD version-Europe","page 11.r",23478,107
+"Spread module code/DD version-Europe","presence.txt",23472,20
+"Spread module code/DD version-Europe","Prog_SpreadModule_V21-web.R",23501,46048
+"Spread module code/DD version-Europe","raster_1.3-11.zip",23452,1295949
+"Spread module code/DD version-Europe","rgdal_0.6-28.zip",23486,8107082
+"Spread module code/DD version-Europe","sp_0.9-66.zip",23510,715888
+"Spread module code/DD version-Europe","SpreadModule.RData",23470,42
+"Spread module code/DD version-Europe","WOPKE.RData",23471,112
+"Spread module code/DD version-world","ClimexOutput.txt",23474,260456
+"Spread module code/DD version-world","econ.tif",23484,325214
+"Spread module code/DD version-world","elev.asc",23559,2722317
+"Spread module code/DD version-world","GPSpoints.txt",23497,56
+"Spread module code/DD version-world","habitat.tif",23572,166478
+"Spread module code/DD version-world","presence.txt",23489,15
+"Spread module code/DD version-world","Prog_SpreadModule_V21world-web.R",23504,42011
+"Spread module code/DD version-world","raster_1.3-11.zip",23535,1295949
+"Spread module code/DD version-world","rgdal_0.6-28.zip",23550,8107082
+"Spread module code/DD version-world","sp_0.9-66.zip",23487,715888
+"Spread module code/DD version-world","SpreadModule.RData",23518,42
+"Spread module code/DD version-world/shpfile","cntry06.dbf",23522,102474
+"Spread module code/DD version-world/shpfile","cntry06.prj",23521,145
+"Spread module code/DD version-world/shpfile","cntry06.sbn",23552,2500
+"Spread module code/DD version-world/shpfile","cntry06.sbx",23476,276
+"Spread module code/DD version-world/shpfile","cntry06.shp",23512,3813136
+"Spread module code/DD version-world/shpfile","cntry06.shp.xml",23458,173104
+"Spread module code/DD version-world/shpfile","cntry06.shx",23516,2084
+"Spread module code/metric version-Europe","ClimexOutput.csv",23536,389219
+"Spread module code/metric version-Europe","ClimexOutput.txt",23468,130324
+"Spread module code/metric version-Europe","econ.tif",23481,247449
+"Spread module code/metric version-Europe","EuropeLAEA.txt",23529,267149
+"Spread module code/metric version-Europe","GPSpoints.txt",23546,68
+"Spread module code/metric version-Europe","habitat.tif",23457,906471
+"Spread module code/metric version-Europe","presence.txt",23520,24
+"Spread module code/metric version-Europe","Prog_SpreadModule_metric_V08-web.R",23570,33166
+"Spread module code/metric version-Europe","raster_1.3-11.zip",23577,1295949
+"Spread module code/metric version-Europe","rgdal_0.6-28.zip",23508,8107082
+"Spread module code/metric version-Europe","sp_0.9-66.zip",23526,715888
+"Spread module code/metric version-Europe","SpreadModule.RData",23566,42
+"Spread module code/metric version-Europe","ZMAX.tif",23528,902891
+"Spread module code/metric version-Europe","ZMIN.tif",23527,902891

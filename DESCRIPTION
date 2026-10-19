@@ -1,6 +1,6 @@
 Package: spreadgen
 Title: Generic Pest Spread Models (Robinet et al. 2012) for Pest Risk Screening
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: c(
     person("Daniel", "Flo", email = "daniel.flo@vkm.no", role = c("aut", "cre")))
 Description: A terra-based port of the generic spread module of Robinet et al. (2012, PLoS ONE 7: e43366;

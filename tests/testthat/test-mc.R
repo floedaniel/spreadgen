@@ -151,6 +151,9 @@ test_that("plots build", {
   m <- mc_spread(g, "RR", list(RR = prior_pert(1, 2, 4, log = TRUE)), 5, t = c(3, 8), entry = list(cells = 35L),
                  id = list(label = "natural"))
   expect_s3_class(plot_probability(g, m$prob[, 2], "p"), "ggplot")
+  pt <- plot_probability(g, m$prob[, 2], "p", region = "target")
+  expect_s3_class(pt, "ggplot")
+  expect_true(all(g$target[match(paste(pt$layers[[2]]$data$x, pt$layers[[2]]$data$y), paste(grid_xy(g)[, 1], grid_xy(g)[, 2]))]))
   expect_s3_class(plot_events(m$events, horizon = 8), "ggplot")
   expect_s3_class(plot_metric(m$metrics), "ggplot")
 })

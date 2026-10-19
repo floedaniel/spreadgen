@@ -13,7 +13,9 @@ plot_probability(
   fill_scale = ggplot2::scale_fill_viridis_c("Probability", limits = c(0, 1), option =
     "viridis"),
   borders = NULL,
-  show = c("suitable", "data")
+  show = c("suitable", "data"),
+  region = c("all", "target"),
+  margin_km = 25
 )
 }
 \arguments{
@@ -28,6 +30,11 @@ plot_probability(
 \item{borders}{Optional sf object drawn on top (outlines).}
 
 \item{show}{Cells to draw: \code{"suitable"} (default) or \code{"data"} (all cells with data).}
+
+\item{region}{\code{"all"} (default) or \code{"target"}: draw probabilities in the target cells only, on the target's
+bounding box (plus \code{margin_km}); other land cells in the box are grey.}
+
+\item{margin_km}{Margin around the target's bounding box (\code{region = "target"}).}
 }
 \value{
 A ggplot object.

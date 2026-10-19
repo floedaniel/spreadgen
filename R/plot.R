@@ -8,27 +8,41 @@
 #' @param fill_scale A ggplot2 fill scale (default viridis, limits 0-1).
 #' @param borders Optional sf object drawn on top (outlines).
 #' @param show Cells to draw: `"suitable"` (default) or `"data"` (all cells with data).
+#' @param region `"all"` (default) or `"target"`: draw probabilities in the target cells only, on the target's
+#'   bounding box (plus `margin_km`); other land cells in the box are grey.
+#' @param margin_km Margin around the target's bounding box (`region = "target"`).
 #' @return A ggplot object.
 #' @export
 plot_probability <- function(g, prob, title = NULL, subtitle = NULL, caption = NULL,
                              fill_scale = ggplot2::scale_fill_viridis_c("Probability", limits = c(0, 1), option = "viridis"),
-                             borders = NULL, show = c("suitable", "data")) {
+                             borders = NULL, show = c("suitable", "data"), region = c("all", "target"), margin_km = 25) {
   show <- match.arg(show)
+  region <- match.arg(region)
   keep <- if (show == "suitable") which(!is.na(g$ei) & g$ei == 1) else which(!is.na(g$ei))
+  lim <- list(x = g$ext[1:2], y = g$ext[3:4])
+  if (region == "target") {
+    if (!any(g$target)) stop("region = \"target\" needs target cells")
+    keep <- keep[g$target[keep]]
+    txy <- grid_xy(g, which(g$target))
+    m <- margin_km * 1000 * (if (isTRUE(g$lonlat)) 1 / 111320 else 1)
+    lim <- list(x = range(txy[, 1]) + c(-1, 1) * (m + g$res[1] / 2), y = range(txy[, 2]) + c(-1, 1) * (m + g$res[2] / 2))
+  }
   xy <- grid_xy(g, keep)
   df <- data.frame(x = xy[, 1], y = xy[, 2], p = prob[keep])
   bg <- grid_xy(g, which(!is.na(g$ei)))
+  inside <- bg[, 1] >= lim$x[1] & bg[, 1] <= lim$x[2] & bg[, 2] >= lim$y[1] & bg[, 2] <= lim$y[2]
+  bg <- bg[inside, , drop = FALSE]
   p <- ggplot2::ggplot() +
     ggplot2::geom_raster(data = data.frame(x = bg[, 1], y = bg[, 2]), ggplot2::aes(.data$x, .data$y), fill = "grey90") +
     ggplot2::geom_raster(data = df, ggplot2::aes(.data$x, .data$y, fill = .data$p)) +
     fill_scale +
-    ggplot2::coord_equal(expand = FALSE) +
+    ggplot2::coord_equal(xlim = lim$x, ylim = lim$y, expand = FALSE) +
     ggplot2::labs(title = title, subtitle = subtitle, caption = caption, x = NULL, y = NULL) +
     ggplot2::theme_minimal(base_size = 12) +
     ggplot2::theme(panel.grid = ggplot2::element_blank(), axis.text = ggplot2::element_blank())
   if (!is.null(borders)) {
     p <- p + ggplot2::geom_sf(data = borders, fill = NA, colour = "grey30", linewidth = 0.2, inherit.aes = FALSE) +
-      ggplot2::coord_sf(crs = g$crs, xlim = g$ext[1:2], ylim = g$ext[3:4], expand = FALSE)
+      ggplot2::coord_sf(crs = g$crs, xlim = lim$x, ylim = lim$y, expand = FALSE)
   }
   p
 }

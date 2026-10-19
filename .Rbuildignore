@@ -3,3 +3,4 @@
 ^inst/original/(?!README\.md$)
 ^LICENSE\.md$
 ^\.gitattributes$
+^inputs$

@@ -17,9 +17,8 @@ For a founder population use \code{\link[=n0_from]{n0_from()}} (e.g. 100 founder
 \item{level}{Density (percent of K, 0 < level < 100).}
 }
 \value{
-SpatRaster of years (NA where the PRA has no data).
+SpatRaster of years (\code{Inf} = never; NA where the PRA has no data).
 }
 \description{
-Closed-form inverse of the logistic: \code{t = ln( N (100 - N0) / (N0 (100 - N)) ) / r}. Cells that never reach
-\code{level} (unsuitable, GI = 0) are \code{Inf}; cells already at or above \code{level} are 0.
+SpatRaster wrapper of \code{\link[=core_slg_years]{core_slg_years()}}.
 }

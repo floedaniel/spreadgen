@@ -35,12 +35,12 @@ cells with data (\code{terra::gridDist()}), so sea and no-data gaps must be trav
 \item{entry_crs}{CRS of \code{entry} coordinates when it differs from the PRA grid.}
 }
 \value{
-An object of class \code{sg_radial}: \code{invaded} (SpatRaster, one 0/1 layer per \code{t}), \code{years_to_reach}
+An object of class \code{sg_radial}: \code{invaded} (SpatRaster, one 0/1 layer per \code{t}), \code{years_to_arrival}
 (SpatRaster, \code{Inf} for unsuitable or unreachable cells), \code{distance_km} (SpatRaster, distance to the nearest
 entry cell), \code{entry} (cells), \code{summary} (data frame per \code{t}), \code{params}.
 }
 \description{
 A suitable cell is invaded at time \code{t} when its distance to the nearest entry cell is at most \code{RR * t}
-(union of discs around the entry cells only; newly invaded cells do not start new discs). The year a cell is
-reached is \code{ceil(d / RR)} (entry cells: 0). Unsuitable cells are never invaded.
+(union of discs around the entry cells only; newly invaded cells do not start new discs). The year of first
+arrival in a cell is \code{ceil(d / RR)} (entry cells: 0). Unsuitable cells are never invaded.
 }

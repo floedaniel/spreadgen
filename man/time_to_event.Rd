@@ -2,26 +2,26 @@
 % Please edit documentation in R/dispk.R
 \name{time_to_event}
 \alias{time_to_event}
-\title{Time-to-event over a region from a per-cell years raster}
+\title{Time-to-event over a target area from a per-cell years raster}
 \usage{
-time_to_event(years, pra, region = NULL, pct = c(10, 50), horizon = Inf)
+time_to_event(years, pra, target = NULL, pct = c(10, 50), horizon = Inf)
 }
 \arguments{
-\item{years}{SpatRaster of years (e.g. \code{years_to_reach} of \code{\link[=spread_dispk]{spread_dispk()}} or \code{\link[=spread_radial]{spread_radial()}}; \code{Inf} = never).}
+\item{years}{SpatRaster of years (e.g. a layer of \code{years_to} of \code{\link[=spread_dispk]{spread_dispk()}}, or \code{years_to_reach} of
+\code{\link[=spread_radial]{spread_radial()}}; \code{Inf} = never).}
 
 \item{pra}{The \code{sg_pra} object the raster belongs to.}
 
-\item{region}{Optional SpatRaster on the PRA grid, 1 (or TRUE) inside the reporting region (e.g. Norway).
-NULL = the whole PRA.}
+\item{target}{Optional SpatRaster on the PRA grid, 1 (or TRUE) inside the target area. NULL = the whole PRA.}
 
-\item{pct}{Shares (percent) of the region's suitable area.}
+\item{pct}{Shares (percent) of the target's suitable area.}
 
 \item{horizon}{Years simulated; events after it are censored (\code{Inf}, "never within horizon").}
 }
 \value{
-Data frame: \code{first_year} (first suitable region cell reached), \verb{year_pct_<x>} (first year at which at
-least x \% of the region's suitable area is reached), \verb{censored_*} flags.
+Data frame: \code{first_year} (first suitable target cell), \verb{year_pct_<x>} (first year at which at least x \% of
+the target's suitable area is reached), \verb{censored_*} flags.
 }
 \description{
-Time-to-event over a region from a per-cell years raster
+Time-to-event over a target area from a per-cell years raster
 }

@@ -34,7 +34,7 @@ test_that("RR default (sphere, no rounding) and grid modes are close to V21", {
   }
 })
 
-test_that("RR: invaded set = suitable cells inside the disc; monotone; years_to_reach consistent", {
+test_that("RR: invaded set = suitable cells inside the disc; monotone; years_to_arrival consistent", {
   p <- prep_suitability(synth_suit(), 0.3)
   e <- cbind(4015500, 3010500)
   x <- spread_radial(p, e, RR = 2, t = 0:8, distance = "grid")
@@ -44,7 +44,7 @@ test_that("RR: invaded set = suitable cells inside the disc; monotone; years_to_
   d <- sqrt((xy[, 1] - e[1])^2 + (xy[, 2] - e[2])^2) / 1000
   for (i in seq_along(0:8)) expect_equal(v[, i] == 1, ei == 1 & d <= 2 * (0:8)[i], label = paste("t =", (0:8)[i]))
   expect_true(all(apply(v, 1, function(z) all(diff(z) >= 0))))
-  yr <- terra::values(x$years_to_reach, mat = FALSE)
+  yr <- terra::values(x$years_to_arrival, mat = FALSE)
   expect_equal(yr[ei == 1], ceiling(d[ei == 1] / 2))
   expect_true(all(is.infinite(yr[ei == 0])))
   for (i in seq_along(0:8)) expect_equal(v[, i] == 1, yr <= (0:8)[i])
@@ -77,7 +77,7 @@ test_that("RR reach = 'land' goes around no-data barriers", {
   d_land <- terra::values(land$distance_km, mat = FALSE)[target]
   expect_equal(d_disc, 8)
   expect_gt(d_land, 25)
-  expect_lt(terra::values(disc$years_to_reach, mat = FALSE)[target], terra::values(land$years_to_reach, mat = FALSE)[target])
+  expect_lt(terra::values(disc$years_to_arrival, mat = FALSE)[target], terra::values(land$years_to_arrival, mat = FALSE)[target])
   expect_error(spread_radial(p, e, RR = 1, reach = "land", distance = "v21"))
 })
 

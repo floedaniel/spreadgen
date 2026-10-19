@@ -12,8 +12,7 @@ spread_dispk(
   p,
   t = c(5, 10, 20, 50),
   P = 1,
-  reach = 1e-06,
-  abundant = 1,
+  levels = c(0.1, 1, 10),
   cutoff = c("auto", "k", "none"),
   k = 10,
   tail_safety = 0.1,
@@ -35,7 +34,8 @@ spread_dispk(
 
 \item{P}{Proportion dispersing (default 1, as the tutorial advises).}
 
-\item{reach, abundant}{Density thresholds (percent of K) for \code{years_to_reach} / \code{years_to_abundant}.}
+\item{levels}{Density levels (percent of K, strict \code{>}) for \code{years_to} and the summary; default
+\code{c(0.1, 1, 10)}, headline 1 (the paper's invaded threshold).}
 
 \item{cutoff}{\code{"auto"}, \code{"k"} or \code{"none"}.}
 
@@ -48,25 +48,13 @@ spread_dispk(
 
 \item{cell_sub}{Sub-points per side for \code{kernel = "cell"}.}
 
-\item{min_u_cells}{Minimum \code{u} in cells; below it the model is skipped (returns \code{status = "spread below grid"}).}
+\item{min_u_cells}{Minimum \code{u} in cells; below it the model is skipped (\code{status = "spread below grid"}).}
 }
 \value{
-An object of class \code{sg_dispk}: \code{density} (SpatRaster per \code{t}, percent of K), \code{years_to_reach},
-\code{years_to_abundant} (SpatRaster, first year above the threshold; \code{Inf} = not within the horizon), \code{summary}
-(per \code{t}), \code{mass} (per year, in percent-of-K x cells: \code{mass_start}, \code{dispersing}, \code{lost_kernel} (1 - kernel
-weight sum: truncation and discretisation), \code{lost_domain} (landed outside the grid or in no-data cells),
-\code{lost_unsuitable} (landed in unsuitable cells with data), \code{mass_after_dispersal}, \code{mass_after_growth}),
-\code{params} (incl. cutoff, kernel weight sum, analytic tail mass), \code{status} (\code{"ok"} or the skip reason).
+An object of class \code{sg_dispk}: \code{density} (SpatRaster per \code{t}, percent of K), \code{years_to} (SpatRaster, one
+layer per level: first year above it, \code{Inf} = not within the horizon), \code{summary} (per \code{t} x level), \code{mass},
+\code{params}, \code{status}. Skipped runs (\code{u} below \code{min_u_cells}) give a warning and \code{status = "spread below grid"}.
 }
 \description{
-One dispersal step is a 2-D convolution of the density with the kernel value at the centre distance,
-\code{f(r)}, multiplied by the landing-cell area (as the original; no renormalisation; on an equal-area grid this is
-\verb{f(r) h^2}), computed by zero-padded FFT (no wrap-around). Mass dispersing into unsuitable / no-data cells,
-beyond the grid, or beyond the kernel cutoff is lost and reported per year.
-}
-\details{
-The kernel cutoff \code{R_c}: \code{"auto"} (default) is the distance beyond which all suitable cells together, each fully
-occupied (100 \% of K), add less than \code{tail_safety * reach} to a landing cell,
-i.e. \verb{n_suitable * 100 f(R_c) h^2 <= tail_safety * reach} (conservative; for fat tails this is the whole grid);
-\code{"k"} uses \code{R_c = k * u}; \code{"none"} uses the whole grid (no truncation inside it).
+SpatRaster wrapper of \code{\link[=core_dispk]{core_dispk()}}; see there for the method, cutoff and mass diagnostics.
 }

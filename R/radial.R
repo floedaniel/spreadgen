@@ -3,8 +3,8 @@
 #' Radial range expansion (RR) model
 #'
 #' A suitable cell is invaded at time `t` when its distance to the nearest entry cell is at most `RR * t`
-#' (union of discs around the entry cells only; newly invaded cells do not start new discs). The year a cell is
-#' reached is `ceil(d / RR)` (entry cells: 0). Unsuitable cells are never invaded.
+#' (union of discs around the entry cells only; newly invaded cells do not start new discs). The year of first
+#' arrival in a cell is `ceil(d / RR)` (entry cells: 0). Unsuitable cells are never invaded.
 #'
 #' @param pra An `sg_pra` object.
 #' @param entry Entry points: a two-column matrix / data frame of coordinates (snapped with [snap_entry()] to the
@@ -18,7 +18,7 @@
 #' @param reach `"disc"` (default, Robinet et al. 2012): straight-line distance. `"land"`: shortest path through
 #'   cells with data (`terra::gridDist()`), so sea and no-data gaps must be travelled around (not in the original).
 #' @param entry_crs CRS of `entry` coordinates when it differs from the PRA grid.
-#' @return An object of class `sg_radial`: `invaded` (SpatRaster, one 0/1 layer per `t`), `years_to_reach`
+#' @return An object of class `sg_radial`: `invaded` (SpatRaster, one 0/1 layer per `t`), `years_to_arrival`
 #'   (SpatRaster, `Inf` for unsuitable or unreachable cells), `distance_km` (SpatRaster, distance to the nearest
 #'   entry cell), `entry` (cells), `summary` (data frame per `t`), `params`.
 #' @export
@@ -31,15 +31,11 @@ spread_radial <- function(pra, entry, RR, t = c(5, 10, 20, 50), distance = c("sp
   r <- pra$rast
   ent <- entry_cells(pra, entry, entry_crs)
   d <- entry_distance_km(r, ent, distance, reach)
-  suit <- r[["ei"]] == 1
-  # years to reach: inclusive test d <= RR * t  <=>  t >= ceil(d / RR) for integer t
-  yrs <- terra::ifel(suit & is.finite(d), ceiling(d / RR), Inf)
-  yrs <- terra::mask(yrs, r[["ei"]])
-  names(yrs) <- "years_to_reach"
-  inv <- terra::rast(lapply(t, function(tt) terra::ifel(suit & d <= RR * tt, 1, 0)))
-  inv <- terra::mask(inv, r[["ei"]])
-  names(inv) <- paste0("t", t)
-  out <- list(invaded = inv, years_to_reach = yrs, distance_km = d, entry = ent,
+  g <- as_grid(pra)
+  yv <- core_radial_years(terra::values(d, mat = FALSE), g$ei, RR)
+  yrs <- grid_to_rast(g, yv, "years_to_arrival")
+  inv <- grid_to_rast(g, sapply(t, function(tt) as.numeric(yv <= tt)), paste0("t", t))
+  out <- list(invaded = inv, years_to_arrival = yrs, distance_km = d, entry = ent,
               summary = occupancy_summary(inv, r, t, d),
               params = list(model = "RR", RR = RR, distance = distance, reach = reach, n_entry = length(ent)))
   class(out) <- "sg_radial"
@@ -82,6 +78,22 @@ spread_radialrand <- function(pra, entry, RR, n0, r, t = c(5, 10, 20, 50),
   rad$summary <- occupancy_summary(inv, ras, t, rad$distance_km)
   rad$params <- c(rad$params, list(model = "Rand-RR", n0 = n0, r = r))
   rad
+}
+
+#' Years to first arrival under the radial model (core)
+#'
+#' `ceil(d / RR)` for suitable cells (equivalent to the inclusive test `d <= RR * t` for integer `t`); `Inf` for
+#' unsuitable or unreachable cells, NA where the grid has no data.
+#' @param d Distance (km) to the nearest entry cell, vector over all cells.
+#' @param ei Suitable mask (0/1, NA = no data), same length.
+#' @param RR Radial rate (km/yr).
+#' @return Numeric vector of years.
+#' @export
+core_radial_years <- function(d, ei, RR) {
+  stopifnot(length(d) == length(ei), RR > 0)
+  y <- ifelse(!is.na(ei) & ei == 1 & is.finite(d), ceiling(d / RR), Inf)
+  y[is.na(ei)] <- NA
+  y
 }
 
 #' @export

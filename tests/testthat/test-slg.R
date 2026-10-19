@@ -37,8 +37,9 @@ test_that("SLG reproduces the V21 baseline exactly (D. virgifera, t = 1..18)", {
   cl <- slg_classes_v21(x)
   expect_equal(cl[, -1], b$summary$slg[, c("sum0", "sum25", "sum50", "sum75", "sum100")], ignore_attr = TRUE)
   # published area at t = 8 (Fig. 6, model C): 59,790 km2 above 1 % of K
-  expect_equal(x$summary$area_abundant_km2[8], 59790, tolerance = 1e-4)
-  expect_equal(x$summary$n_suitable[1], 3104)
+  s1 <- x$summary[x$summary$level == 1, ]
+  expect_equal(s1$area_km2[s1$t == 8], 59790, tolerance = 1e-4)
+  expect_equal(s1$n_suitable[1], 3104)
 })
 
 test_that("slg_time_to inverts spread_slg", {
@@ -53,11 +54,22 @@ test_that("slg_time_to inverts spread_slg", {
   expect_true(all(terra::values(slg_time_to(p, n0 = 5, lmax = 20, level = 1))[ei == 1] == 0))
 })
 
-test_that("summary thresholds: reach <= abundant counts", {
+test_that("summary levels: lower levels cover more area; default levels 0.1 / 1 / 10", {
   p <- prep_suitability(synth_suit(), 0.2)
-  s <- spread_slg(p, n0 = 1e-5, lmax = 8, t = c(2, 6, 12))$summary
-  expect_true(all(s$n_reach >= s$n_abundant))
-  expect_true(all(diff(s$pct_suitable_abundant) >= 0))
-  expect_true(all(s$pct_suitable_reach <= 100))
-  expect_error(spread_slg(p, n0 = 1e-5, lmax = 8, reach = 2, abundant = 1))
+  x <- spread_slg(p, n0 = 1e-5, lmax = 8, t = c(2, 6, 12))
+  s <- x$summary
+  expect_equal(sort(unique(s$level)), c(0.1, 1, 10))
+  for (tt in c(2, 6, 12)) expect_true(all(diff(s$n_cells[s$t == tt]) <= 0))
+  expect_true(all(diff(s$pct_suitable[s$level == 1]) >= 0))
+  expect_true(all(s$pct_suitable <= 100))
+  expect_error(spread_slg(p, n0 = 1e-5, lmax = 8, levels = 0))
+  expect_equal(unique(spread_slg(p, n0 = 1e-5, lmax = 8, t = 5, levels = 2)$summary$level), 2)
+})
+
+test_that("core_slg works on plain vectors and matches the raster wrapper", {
+  p <- prep_suitability(synth_suit(), 0.2)
+  g <- as_grid(p)
+  m <- core_slg(g, 1e-3, 6, c(3, 9))
+  expect_equal(unname(m), unname(terra::values(spread_slg(p, 1e-3, 6, c(3, 9))$density)))
+  expect_equal(core_slg_years(g, 1e-3, 6, 1), terra::values(slg_time_to(p, 1e-3, 6, 1), mat = FALSE))
 })

@@ -72,34 +72,34 @@ init_density <- function(pra, entry, density, crs = NULL, to = c("any", "suitabl
 #' @param distance `"auto"` (lon/lat: `"sphere"`, projected: `"euclid"`), `"v21"` (great circle with the
 #'   original 7-digit cosine rounding), `"sphere"` (great circle, no rounding) or `"euclid"` (planar).
 #' @param sphere_correction Apply the kernel's `1/s` sphere correction; default TRUE on lon/lat grids.
-#' @param reach,abundant Density thresholds (percent of K) for `years_to_reach` / `years_to_abundant`.
+#' @param levels Density levels (percent of K, strict `>`) for `years_to` and the summary; default
+#'   `c(0.1, 1, 10)`, headline 1 (the paper's invaded threshold).
 #' @return An object of class `sg_dispk` (see [spread_dispk()]).
 #' @export
 spread_dispk_reference <- function(pra, init, lmax, u, p, t = 1:10, P = 1, distance = c("auto", "v21", "sphere", "euclid"),
-                                   sphere_correction = NULL, reach = 1e-6, abundant = 1) {
+                                   sphere_correction = NULL, levels = c(0.1, 1, 10)) {
   distance <- match.arg(distance)
-  r <- pra$rast
-  lonlat <- terra::is.lonlat(r)
+  g <- as_grid(pra)
+  lonlat <- g$lonlat
   if (distance == "auto") distance <- if (lonlat) "sphere" else "euclid"
   if (distance != "euclid" && !lonlat) stop("distance '", distance, "' needs a lon/lat grid")
   if (is.null(sphere_correction)) sphere_correction <- lonlat
   check_kernel_params(lmax, p, P)
-  v <- terra::values(r, mat = TRUE)
-  ok <- which(!is.na(v[, "ei"]))
-  xy <- terra::xyFromCell(r, ok)
+  check_levels(levels)
+  ok <- which(!is.na(g$ei))
+  xy <- grid_xy(g, ok)
   if (!lonlat) xy <- xy / 1000
-  area <- v[ok, "area_km2"]
-  suit <- v[ok, "ei"] == 1
-  growth <- v[ok, "gi"] * log(lmax) / 100
+  area <- g$area_km2[ok]
+  suit <- g$ei[ok] == 1
+  growth <- g$gi[ok] * log(lmax) / 100
   pop <- terra::values(init, mat = FALSE)[ok]
   pop[is.na(pop)] <- 0
   sources <- which(suit | pop > 0)
   digits <- if (distance == "v21") 7 else NULL
   t_max <- max(t)
   keep <- list()
-  yr_reach <- yr_abund <- rep(Inf, length(ok))
-  yr_reach[pop > reach] <- 0
-  yr_abund[pop > abundant] <- 0
+  yrs <- matrix(Inf, length(ok), length(levels))
+  for (j in seq_along(levels)) yrs[pop > levels[j], j] <- 0
   mass <- vector("list", t_max)
   for (k in seq_len(t_max)) {
     popdisp <- numeric(length(ok))
@@ -117,19 +117,18 @@ spread_dispk_reference <- function(pra, init, lmax, u, p, t = 1:10, P = 1, dista
     mass[[k]] <- data.frame(year = k, mass_start = m_start, dispersing = P * m_start, lost_kernel = NA_real_,
                             lost_domain = P * m_start - landed, lost_unsuitable = lost_unsuit,
                             mass_after_dispersal = sum(popdisp), mass_after_growth = sum(pop))
-    yr_reach[is.infinite(yr_reach) & pop > reach] <- k
-    yr_abund[is.infinite(yr_abund) & pop > abundant] <- k
+    for (j in seq_along(levels)) yrs[is.infinite(yrs[, j]) & pop > levels[j], j] <- k
     if (k %in% t) keep[[as.character(k)]] <- pop
   }
-  dens <- terra::rast(lapply(as.character(t), function(k) cells_to_rast(r, ok, keep[[k]])))
-  names(dens) <- paste0("t", t)
-  new_dispk(dens, cells_to_rast(r, ok, yr_reach), cells_to_rast(r, ok, yr_abund), r, t, reach, abundant,
-            mass = do.call(rbind, mass),
-            params = list(model = "DK", impl = "reference", lmax = lmax, u = u, p = p, P = P, distance = distance,
-                          sphere_correction = sphere_correction, horizon = t_max))
+  full <- function(x) { v <- rep(NA_real_, length(g$ei)); v[ok] <- x; v }
+  res <- list(density = sapply(as.character(t), function(kk) full(keep[[kk]])),
+              years = apply(yrs, 2, full), mass = do.call(rbind, mass), status = "ok",
+              params = list(model = "DK", impl = "reference", lmax = lmax, u = u, p = p, P = P, distance = distance,
+                            sphere_correction = sphere_correction, horizon = t_max, levels = levels))
+  dispk_result(res, g, t)
 }
 
-#' Dispersal kernel (DK) model, FFT convolution on an equal-area grid
+#' Dispersal kernel (DK) model core: FFT convolution on a plain-data equal-area grid
 #'
 #' One dispersal step is a 2-D convolution of the density with the kernel value at the centre distance,
 #' `f(r)`, multiplied by the landing-cell area (as the original; no renormalisation; on an equal-area grid this is
@@ -137,54 +136,53 @@ spread_dispk_reference <- function(pra, init, lmax, u, p, t = 1:10, P = 1, dista
 #' beyond the grid, or beyond the kernel cutoff is lost and reported per year.
 #'
 #' The kernel cutoff `R_c`: `"auto"` (default) is the distance beyond which all suitable cells together, each fully
-#' occupied (100 % of K), add less than `tail_safety * reach` to a landing cell,
-#' i.e. `n_suitable * 100 f(R_c) h^2 <= tail_safety * reach` (conservative; for fat tails this is the whole grid);
-#' `"k"` uses `R_c = k * u`; `"none"` uses the whole grid (no truncation inside it).
+#' occupied (100 % of K), add less than `tail_safety * min(levels)` to a landing cell,
+#' i.e. `n_suitable * 100 f(R_c) h^2 <= tail_safety * min(levels)` (conservative); `"k"` uses `R_c = k * u`;
+#' `"none"` uses the whole grid (no truncation inside it).
 #'
+#' @param g An `sg_grid` object on a projected, equal-area grid with square cells (e.g. EPSG:3035).
+#' @param init Initial density (percent of K), vector over all cells.
 #' @inheritParams spread_dispk_reference
-#' @param pra An `sg_pra` object on a projected, equal-area grid with square cells (e.g. EPSG:3035).
 #' @param cutoff `"auto"`, `"k"` or `"none"`.
 #' @param k Cutoff factor for `cutoff = "k"`.
 #' @param tail_safety Factor for `cutoff = "auto"` (default 0.1).
 #' @param kernel `"point"` (default, original discretisation) or `"cell"` (kernel averaged over `cell_sub` x
 #'   `cell_sub` points per landing cell; deviation, better mass balance when `u` is near the cell size).
 #' @param cell_sub Sub-points per side for `kernel = "cell"`.
-#' @param min_u_cells Minimum `u` in cells; below it the model is skipped (returns `status = "spread below grid"`).
-#' @return An object of class `sg_dispk`: `density` (SpatRaster per `t`, percent of K), `years_to_reach`,
-#'   `years_to_abundant` (SpatRaster, first year above the threshold; `Inf` = not within the horizon), `summary`
-#'   (per `t`), `mass` (per year, in percent-of-K x cells: `mass_start`, `dispersing`, `lost_kernel` (1 - kernel
-#'   weight sum: truncation and discretisation), `lost_domain` (landed outside the grid or in no-data cells),
-#'   `lost_unsuitable` (landed in unsuitable cells with data), `mass_after_dispersal`, `mass_after_growth`),
-#'   `params` (incl. cutoff, kernel weight sum, analytic tail mass), `status` (`"ok"` or the skip reason).
+#' @param min_u_cells Minimum `u` in cells; below it the model is skipped (`status = "spread below grid"`).
+#' @param keep_density Return the density matrix (cells x `t`); FALSE saves memory in Monte Carlo runs.
+#' @return List: `density` (matrix cells x `t`, percent of K, or NULL), `years` (matrix cells x levels: first year
+#'   above each level, `Inf` = not within the horizon), `mass` (per year, percent-of-K x cells: `mass_start`,
+#'   `dispersing`, `lost_kernel` (1 - kernel weight sum: truncation and discretisation), `lost_domain` (landed outside
+#'   the grid or in no-data cells), `lost_unsuitable` (landed in unsuitable cells with data),
+#'   `mass_after_dispersal`, `mass_after_growth`), `params`, `status` (`"ok"` or the skip reason).
 #' @export
-spread_dispk <- function(pra, init, lmax, u, p, t = c(5, 10, 20, 50), P = 1, reach = 1e-6, abundant = 1,
-                         cutoff = c("auto", "k", "none"), k = 10, tail_safety = 0.1, kernel = c("point", "cell"),
-                         cell_sub = 5, min_u_cells = 2) {
+core_dispk <- function(g, init, lmax, u, p, t = c(5, 10, 20, 50), P = 1, levels = c(0.1, 1, 10),
+                       cutoff = c("auto", "k", "none"), k = 10, tail_safety = 0.1, kernel = c("point", "cell"),
+                       cell_sub = 5, min_u_cells = 2, keep_density = TRUE) {
   cutoff <- match.arg(cutoff)
   kernel <- match.arg(kernel)
-  r <- pra$rast
-  if (terra::is.lonlat(r)) stop("spread_dispk() needs a projected equal-area grid; use spread_dispk_reference() on lon/lat")
-  res <- terra::res(r)
-  if (abs(res[1] - res[2]) > 1e-6 * res[1]) stop("spread_dispk() needs square cells")
-  h <- res[1] / 1000
+  stopifnot(inherits(g, "sg_grid"))
+  if (g$lonlat) stop("the FFT kernel model needs a projected equal-area grid; use spread_dispk_reference() on lon/lat")
+  if (abs(g$res[1] - g$res[2]) > 1e-6 * g$res[1]) stop("the FFT kernel model needs square cells")
+  h <- g$cell_km
   check_kernel_params(lmax, p, P)
-  if (reach < 1e-8) {
-    warning("reach below 1e-8 % of K is within FFT round-off; set to 1e-8")
-    reach <- 1e-8
-  }
+  check_levels(levels)
   t_max <- max(t)
-  base_params <- list(model = "DK", impl = "fft", lmax = lmax, u = u, p = p, P = P, cell_km = h, horizon = t_max)
+  base_params <- list(model = "DK", impl = "fft", lmax = lmax, u = u, p = p, P = P, cell_km = h, horizon = t_max,
+                      levels = levels)
   if (u / h < min_u_cells) {
-    warning(sprintf("u = %g km is %.2f cells (< %g): DK skipped (spread below grid)", u, u / h, min_u_cells))
-    return(structure(list(status = "spread below grid", params = base_params), class = "sg_dispk"))
+    return(list(density = NULL, years = NULL, mass = NULL, status = "spread below grid", params = base_params))
   }
-  nr <- terra::nrow(r)
-  nc <- terra::ncol(r)
-  R_c <- switch(cutoff,
-                none = Inf,
-                k = k * u,
-                auto = auto_cutoff(u, p, h, tail_safety * reach / max(1, sum(terra::values(r[["ei"]], mat = FALSE) == 1, na.rm = TRUE))))
-  diag_km <- h * sqrt(nr^2 + nc^2)
+  nr <- g$nrow
+  nc <- g$ncol
+  tomat <- function(v) matrix(v, nr, nc, byrow = TRUE)
+  ei <- tomat(g$ei)
+  has_data <- !is.na(ei)
+  suit <- has_data & ei == 1
+  # FFT round-off is ~1e-12 of the maximum density: the cutoff criterion never goes below 1e-8 % of K
+  target <- tail_safety * max(min(levels), 1e-8) / max(1, sum(suit))
+  R_c <- switch(cutoff, none = Inf, k = k * u, auto = auto_cutoff(u, p, h, target))
   # kernel half-sizes per axis: offsets beyond the grid cannot land inside it
   n_c <- if (is.finite(R_c)) ceiling(R_c / h) else Inf
   n_r <- min(n_c, nr - 1)
@@ -199,17 +197,13 @@ spread_dispk <- function(pra, init, lmax, u, p, t = c(5, 10, 20, 50), P = 1, rea
   Kf <- stats::fft(embed_kernel(w, n_r, n_x, Nr, Nc))
   R_used <- if (is.finite(R_c)) min(R_c, h * sqrt(n_r^2 + n_x^2)) else h * sqrt(n_r^2 + n_x^2)
 
-  ei <- terra::as.matrix(r[["ei"]], wide = TRUE)
-  has_data <- !is.na(ei)
-  suit <- has_data & ei == 1
-  area <- terra::as.matrix(r[["area_km2"]], wide = TRUE)
+  area <- tomat(g$area_km2)
   area[is.na(area)] <- 0
-  growth <- terra::as.matrix(r[["gi"]], wide = TRUE) * log(lmax) / 100
+  growth <- tomat(g$gi) * log(lmax) / 100
   growth[is.na(growth)] <- 0
-  pop <- terra::as.matrix(init, wide = TRUE)
+  pop <- tomat(init)
   pop[is.na(pop)] <- 0
-  yr_reach <- ifelse(pop > reach, 0, Inf)
-  yr_abund <- ifelse(pop > abundant, 0, Inf)
+  yrs <- lapply(levels, function(lv) ifelse(pop > lv, 0, Inf))
   keep <- list()
   mass <- vector("list", t_max)
   A <- matrix(0, Nr, Nc)
@@ -228,52 +222,59 @@ spread_dispk <- function(pra, init, lmax, u, p, t = c(5, 10, 20, 50), P = 1, rea
                              lost_kernel = P * m_start * (1 - w_sum), lost_domain = P * m_start * w_sum - sum(inside),
                              lost_unsuitable = lost_unsuit, mass_after_dispersal = sum(popdisp),
                              mass_after_growth = sum(pop))
-    yr_reach[is.infinite(yr_reach) & pop > reach] <- yr
-    yr_abund[is.infinite(yr_abund) & pop > abundant] <- yr
-    if (yr %in% t) keep[[as.character(yr)]] <- pop
+    for (j in seq_along(levels)) yrs[[j]][is.infinite(yrs[[j]]) & pop > levels[j]] <- yr
+    if (keep_density && yr %in% t) keep[[as.character(yr)]] <- pop
   }
   secs <- proc.time()[["elapsed"]] - t0
-  to_r <- function(m) terra::mask(terra::setValues(r[["ei"]], as.vector(t(m))), r[["ei"]])
-  dens <- terra::rast(lapply(as.character(t), function(kk) to_r(keep[[kk]])))
-  names(dens) <- paste0("t", t)
-  new_dispk(dens, to_r(yr_reach), to_r(yr_abund), r, t, reach, abundant, mass = do.call(rbind, mass),
-            params = c(base_params, list(cutoff = cutoff, R_c_requested_km = R_c, R_c_km = R_used, k_eff = R_used / u,
-                                         kernel = kernel, kernel_half_cells = c(n_r, n_x), kernel_weight_sum = w_sum,
-                                         tail_mass_beyond_cutoff = if (is.finite(R_c)) kernel_tail_2dt(R_c, u, p) else 0,
-                                         cutoff_capped = is.finite(R_c) && R_c > R_used, grid_diag_km = diag_km,
-                                         fft_dim = c(Nr, Nc), seconds = secs)))
+  tovec <- function(m) { v <- as.vector(t(m)); v[is.na(g$ei)] <- NA; v }
+  list(density = if (keep_density) sapply(as.character(t), function(kk) tovec(keep[[kk]])) else NULL,
+       years = sapply(yrs, tovec), mass = do.call(rbind, mass), status = "ok",
+       params = c(base_params, list(cutoff = cutoff, R_c_requested_km = R_c, R_c_km = R_used, k_eff = R_used / u,
+                                    kernel = kernel, kernel_half_cells = c(n_r, n_x), kernel_weight_sum = w_sum,
+                                    tail_mass_beyond_cutoff = if (is.finite(R_c)) kernel_tail_2dt(R_c, u, p) else 0,
+                                    cutoff_capped = is.finite(R_c) && R_c > R_used, grid_diag_km = h * sqrt(nr^2 + nc^2),
+                                    fft_dim = c(Nr, Nc), seconds = secs)))
 }
 
-#' Time-to-event over a region from a per-cell years raster
+#' Dispersal kernel (DK) model, FFT convolution on an equal-area grid
 #'
-#' @param years SpatRaster of years (e.g. `years_to_reach` of [spread_dispk()] or [spread_radial()]; `Inf` = never).
-#' @param pra The `sg_pra` object the raster belongs to.
-#' @param region Optional SpatRaster on the PRA grid, 1 (or TRUE) inside the reporting region (e.g. Norway).
-#'   NULL = the whole PRA.
-#' @param pct Shares (percent) of the region's suitable area.
-#' @param horizon Years simulated; events after it are censored (`Inf`, "never within horizon").
-#' @return Data frame: `first_year` (first suitable region cell reached), `year_pct_<x>` (first year at which at
-#'   least x % of the region's suitable area is reached), `censored_*` flags.
+#' SpatRaster wrapper of [core_dispk()]; see there for the method, cutoff and mass diagnostics.
+#'
+#' @param pra An `sg_pra` object on a projected, equal-area grid with square cells (e.g. EPSG:3035).
+#' @param init Initial density, SpatRaster from [init_density()] (percent of K).
+#' @inheritParams core_dispk
+#' @return An object of class `sg_dispk`: `density` (SpatRaster per `t`, percent of K), `years_to` (SpatRaster, one
+#'   layer per level: first year above it, `Inf` = not within the horizon), `summary` (per `t` x level), `mass`,
+#'   `params`, `status`. Skipped runs (`u` below `min_u_cells`) give a warning and `status = "spread below grid"`.
 #' @export
-time_to_event <- function(years, pra, region = NULL, pct = c(10, 50), horizon = Inf) {
-  y <- terra::values(years, mat = FALSE)
-  ei <- terra::values(pra$rast[["ei"]], mat = FALSE)
-  a <- terra::values(pra$rast[["area_km2"]], mat = FALSE)
-  inreg <- if (is.null(region)) rep(TRUE, length(y)) else { g <- terra::values(region, mat = FALSE); !is.na(g) & g > 0 }
-  sel <- inreg & !is.na(ei) & ei == 1
-  y <- y[sel]
-  a <- a[sel]
-  y[y > horizon] <- Inf
-  out <- data.frame(n_suitable_region = sum(sel), area_suitable_region_km2 = sum(a),
-                    first_year = if (length(y)) min(y) else Inf)
-  o <- order(y)
-  cum <- cumsum(a[o]) / sum(a)
-  for (x in pct) {
-    j <- which(cum >= x / 100 - 1e-12)[1]
-    out[[paste0("year_pct_", x)]] <- if (is.na(j)) Inf else y[o][j]
+spread_dispk <- function(pra, init, lmax, u, p, t = c(5, 10, 20, 50), P = 1, levels = c(0.1, 1, 10),
+                         cutoff = c("auto", "k", "none"), k = 10, tail_safety = 0.1, kernel = c("point", "cell"),
+                         cell_sub = 5, min_u_cells = 2) {
+  if (terra::is.lonlat(pra$rast)) stop("spread_dispk() needs a projected equal-area grid; use spread_dispk_reference() on lon/lat")
+  g <- as_grid(pra)
+  res <- core_dispk(g, terra::values(init, mat = FALSE), lmax, u, p, t, P, levels, match.arg(cutoff), k, tail_safety,
+                    match.arg(kernel), cell_sub, min_u_cells)
+  if (!identical(res$status, "ok")) {
+    warning(sprintf("u = %g km is %.2f cells (< %g): DK skipped (spread below grid)", u, u / g$cell_km, min_u_cells))
+    return(structure(list(status = res$status, params = res$params), class = "sg_dispk"))
   }
-  for (nm in grep("year", names(out), value = TRUE)) out[[paste0("censored_", nm)]] <- is.infinite(out[[nm]])
-  out
+  dispk_result(res, g, t)
+}
+
+#' Time-to-event over a target area from a per-cell years raster
+#'
+#' @param years SpatRaster of years (e.g. a layer of `years_to` of [spread_dispk()], or `years_to_reach` of
+#'   [spread_radial()]; `Inf` = never).
+#' @param pra The `sg_pra` object the raster belongs to.
+#' @param target Optional SpatRaster on the PRA grid, 1 (or TRUE) inside the target area. NULL = the whole PRA.
+#' @param pct Shares (percent) of the target's suitable area.
+#' @param horizon Years simulated; events after it are censored (`Inf`, "never within horizon").
+#' @return Data frame: `first_year` (first suitable target cell), `year_pct_<x>` (first year at which at least x % of
+#'   the target's suitable area is reached), `censored_*` flags.
+#' @export
+time_to_event <- function(years, pra, target = NULL, pct = c(10, 50), horizon = Inf) {
+  g <- as_grid(pra, target)
+  tte_vec(terra::values(years, mat = FALSE), g, pct, horizon)
 }
 
 #' @export
@@ -283,8 +284,8 @@ print.sg_dispk <- function(x, ...) {
     cat(sprintf("<sg_dispk> skipped: %s (u = %g km, cell %g km)\n", x$status, pr$u, pr$cell_km))
     return(invisible(x))
   }
-  cat(sprintf("<sg_dispk> %s, lmax = %g, u = %g km, p = %g, P = %g, horizon %d yr\n", pr$impl, pr$lmax, pr$u, pr$p,
-              pr$P, pr$horizon))
+  cat(sprintf("<sg_dispk> %s, lmax = %g, u = %g km, p = %g, P = %g, horizon %d yr, levels %s %% of K\n", pr$impl,
+              pr$lmax, pr$u, pr$p, pr$P, pr$horizon, paste(pr$levels, collapse = " / ")))
   if (pr$impl == "fft") {
     cat(sprintf("  cutoff %s: R_c = %.0f km (%.1f u), kernel weight sum %.4f, tail mass beyond R_c %.2e, %.1f s\n",
                 pr$cutoff, pr$R_c_km, pr$k_eff, pr$kernel_weight_sum, pr$tail_mass_beyond_cutoff, pr$seconds))
@@ -300,19 +301,18 @@ check_kernel_params <- function(lmax, p, P) {
   if (p < 2) warning("p < 2: below the tutorial range (fat, near-Cauchy tail)")
 }
 
-new_dispk <- function(dens, yr_reach, yr_abund, r, t, reach, abundant, mass, params) {
-  names(yr_reach) <- "years_to_reach"
-  names(yr_abund) <- "years_to_abundant"
-  structure(list(density = dens, years_to_reach = yr_reach, years_to_abundant = yr_abund,
-                 summary = density_summary(dens, r, t, reach, abundant), mass = mass,
-                 params = c(params, list(reach = reach, abundant = abundant)), status = "ok"),
-            class = "sg_dispk")
+check_levels <- function(levels) {
+  stopifnot(is.numeric(levels), length(levels) >= 1, all(levels > 0), all(levels < 100))
 }
 
-cells_to_rast <- function(r, ok, x) {
-  v <- rep(NA_real_, terra::ncell(r))
-  v[ok] <- x
-  terra::setValues(r[["ei"]], v)
+# Core result (vectors) -> sg_dispk with SpatRasters
+dispk_result <- function(res, g, t) {
+  lv <- res$params$levels
+  structure(list(density = grid_to_rast(g, res$density, paste0("t", t)),
+                 years_to = grid_to_rast(g, res$years, paste0("years_to_", lv)),
+                 summary = level_summary(res$density, g, t, lv), mass = res$mass, params = res$params,
+                 status = "ok"),
+            class = "sg_dispk")
 }
 
 # Smallest r with 100 * f(r) * h^2 <= target (percent of K)

@@ -14,8 +14,7 @@ spread_dispk_reference(
   P = 1,
   distance = c("auto", "v21", "sphere", "euclid"),
   sphere_correction = NULL,
-  reach = 1e-06,
-  abundant = 1
+  levels = c(0.1, 1, 10)
 )
 }
 \arguments{
@@ -36,7 +35,8 @@ original 7-digit cosine rounding), \code{"sphere"} (great circle, no rounding) o
 
 \item{sphere_correction}{Apply the kernel's \code{1/s} sphere correction; default TRUE on lon/lat grids.}
 
-\item{reach, abundant}{Density thresholds (percent of K) for \code{years_to_reach} / \code{years_to_abundant}.}
+\item{levels}{Density levels (percent of K, strict \code{>}) for \code{years_to} and the summary; default
+\code{c(0.1, 1, 10)}, headline 1 (the paper's invaded threshold).}
 }
 \value{
 An object of class \code{sg_dispk} (see \code{\link[=spread_dispk]{spread_dispk()}}).

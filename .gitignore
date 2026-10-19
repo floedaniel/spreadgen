@@ -6,3 +6,4 @@ inst/original/*
 !tests/testthat/fixtures/*.rds
 !tests/testthat/fixtures/*.csv
 .Rproj.user/
+!inst/extdata/*.csv

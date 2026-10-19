@@ -1,0 +1,93 @@
+---
+title: "spreadgen: reproducing D. virgifera virgifera"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{spreadgen: reproducing D. virgifera virgifera}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7, fig.height = 4.5)
+library(spreadgen)
+```
+
+The case study of Robinet et al. (2012, PLoS ONE 7: e43366): western corn rootworm entering at Belgrade in 1992
+(t = 0), evaluated in 2010 (t = 18). Inputs: the CLIMEX table of the original case study, already masked by the
+maize habitat (`inst/extdata`), on the 0.5° lon/lat grid with the original cell areas.
+
+**Outputs are scenarios conditional on the assumptions (suitability, parameters, entry), not predictions.**
+
+```{r pra}
+tab <- read.csv(system.file("extdata", "dvv_climex_habitat.csv", package = "spreadgen"))
+pra <- prep_climex(tab, rescale_gi = FALSE, area_method = "v21")
+pra
+v21 <- read.csv(system.file("extdata", "dvv_v21_baseline_areas.csv", package = "spreadgen"))
+```
+
+## Model C: simple logistic growth
+
+K = 1579 km² x 0.2 x 200e6 beetles km⁻² ≈ 6.3e10 per cell; 100 founders give N0 = 1.6e-7 % of K.
+
+```{r slg}
+n0 <- n0_from(100, k_carrying(1579, 0.2, 200e6))
+slg <- spread_slg(pra, n0 = n0, lmax = 40, t = c(8, 18))
+s <- slg$summary[slg$summary$level == 1, ]
+data.frame(t = s$t, spreadgen_km2 = round(s$area_km2), V21_km2 = v21$slg_abundant_km2[s$t])
+```
+
+At t = 8 both give 59,790 km² above 1 % of K (paper, Fig. 6); the case study used the same N0
+(100 × 100 / 6.3e10 = 1.587e-7 %), so the areas agree at every t.
+
+## Model B: radial range expansion
+
+```{r radial}
+rad <- spread_radial(pra, cbind(20.30, 44.82), RR = 80, t = c(8, 18), distance = "v21")
+data.frame(t = rad$summary$t, spreadgen_km2 = round(rad$summary$area_invaded_km2),
+           V21_km2 = v21$radial_invaded_km2[rad$summary$t], pct_suitable_cells = round(rad$summary$pniche, 1))
+```
+
+"More than half of the area of potential establishment invaded within 18 years."
+
+## Model D: dispersal kernel
+
+The literal port (`spread_dispk_reference()`) reproduces V21 to 1e-14 on this grid but takes about 3 minutes for
+18 years; the production version (`spread_dispk()`) is an FFT convolution and needs an equal-area grid. Here the
+inputs are resampled to 25 km LAEA (EPSG:3035).
+
+```{r dispk}
+ei <- terra::project(pra$rast[["ei"]], "EPSG:3035", res = 25000, method = "near")
+gi <- terra::project(pra$rast[["gi"]], "EPSG:3035", res = 25000, method = "near")
+suit <- terra::ifel(ei == 1, gi / 100, 0)
+pra_ea <- prep_suitability(suit, threshold = 1e-9)
+entry <- snap_entry(pra_ea, cbind(20.30, 44.82), crs = "EPSG:4326", to = "any")
+# keep 100 founders in the (smaller) 625 km2 entry cell
+init <- init_density(pra_ea, entry$cell, n0_from(100, k_carrying(625, 0.2, 200e6)))
+dk <- spread_dispk(pra_ea, init, lmax = 40, u = 80, p = 5, t = c(16, 17, 18))
+s <- dk$summary[dk$summary$level == 1, ]
+data.frame(t = s$t, spreadgen_25km_km2 = round(s$area_km2), V21_km2 = round(v21$dispk_abundant_km2[s$t]))
+```
+
+The kernel model is in its exponential phase at t = 16-18, so grid and founder assumptions shift the invaded area
+strongly (see `inst/benchmarks-dispk.md`).
+
+## Monte Carlo
+
+Parameter uncertainty as PERT priors; the radial rate on the log scale.
+
+```{r mc}
+g <- as_grid(pra)
+mc <- mc_spread(g, "RR", list(RR = prior_pert(60, 80, 100, log = TRUE)), n_draws = 200, t = c(8, 18),
+                entry = list(cells = snap_entry(pra, cbind(20.30, 44.82))$cell), seed = 1, key = "DIABVI",
+                id = list(species = "DIABVI", label = "RR 60-80-100 km/yr"))
+s <- summarise_spread(mc)$metrics
+s[s$metric == "pct_suitable", c("t", "q05", "q50", "q95")]
+plot_metric(mc$metrics, "pct_suitable", ylab = "% of suitable area invaded")
+```
+
+## Caveats
+
+- Scenarios, not predictions; no predictive validation exists (Robinet et al. 2012).
+- The kernel shape (p, the paper's nu) and lmax are weakly identifiable.
+- GI from SDM suitability is an assumption (CLIMEX GI is a population growth index).
+- Empirical front speeds include human-assisted spread; they are not natural dispersal rates.
